@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>UPSC Mapping (based on PYQ and various test series)</title>
+  <link rel="icon" href="advani.png" type="image/png">
+  
+  <!-- Leaflet and jQuery -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  
+  <style>
+    /* Global Styles */
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f1f1f1;
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      justify-content: space-between;
+    }
+
+    /* Heading and Subheading */
+    #heading {
+      text-align: center;
+      font-size: 1em;
+      font-weight: bold;
+      color: #333;
+      margin: 5px 0;
+      max-width: 80%;
+    }
+
+    #subheading {
+      text-align: center;
+      font-size: 0.6em;
+      font-weight: 400;
+      color: rgba(51, 51, 51, 0.6);
+      margin: 0;
+      opacity: 0.8;
+      font-style: italic;
+      max-width: 80%;
+    }
+
+    /* Map Container with overlay */
+    #map-container {
+      position: relative;
+      width: 100%;
+      max-width: 1000px;
+      margin: 10px auto;
+    }
+    #map {
+      width: 100%;
+      height: 600px; /* Extended map box */
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    /* Overlay for the category selector */
+    #map-overlay {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(255,255,255,0.85);
+      padding: 8px 12px;
+      border-radius: 4px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      font-size: 0.9em;
+      display: flex;
+      align-items: center;
+      z-index: 1000;
+    }
+    #map-overlay label {
+      margin-right: 8px;
+      font-weight: 600;
+      color: #555;
+    }
+    #map-overlay select {
+      padding: 5px 8px;
+      font-size: 0.9em;
+      border: 1px solid #4CAF50;
+      border-radius: 4px;
+      background: #e8f5e9;
+      outline: none;
+    }
+
+    /* Submit Location Box */
+    #submit-box {
+      width: 100%;
+      max-width: 1000px;
+      margin: 10px auto;
+      padding: 10px;
+      background: #fff;
+      border-top: 1px solid #ddd;
+      text-align: center;
+      box-shadow: 0 -2px 4px rgba(0,0,0,0.05);
+    }
+    #submit-box button {
+      padding: 8px 15px;
+      font-size: 1em;
+      border: none;
+      border-radius: 4px;
+      background: #4CAF50;
+      color: #fff;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    #submit-box button:hover {
+      background: #45a049;
+    }
+    #submit-box p {
+      margin: 5px 0 0;
+      font-size: 0.8em;
+      color: #777;
+    }
+    #submit-box p a {
+      color: #4CAF50;
+      text-decoration: none;
+    }
+
+    /* Footer */
+    footer {
+      background: #fff;
+      border-top: 1px solid #ddd;
+      text-align: center;
+      padding: 8px 20px;
+      font-size: 0.7em;
+      color: #777;
+      margin-top: auto;
+    }
+    footer a {
+      color: #4CAF50;
+      text-decoration: none;
+    }
+
+    /* Countdown Timer */
+    #timer {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      font-size: 0.7em;
+      background: rgba(0,0,0,0.7);
+      color: #fff;
+      padding: 4px 8px;
+      border-radius: 4px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    }
+
+    /* Hover effects */
+    .leaflet-marker-icon {
+      cursor: pointer;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      #map {
+        height: 400px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Heading and Subheading -->
+  <div id="heading">UPSC Mapping</div>
+  <div id="subheading">(Based on PYQ and various test series)</div>
+  
+  <!-- Map Container with overlayed category selector -->
+  <div id="map-container">
+    <div id="map"></div>
+    <div id="map-overlay">
+      <label for="filter">Select Category:</label>
+      <select id="filter">
+        <option value="Ramsar Site">Ramsar Sites</option>
+      </select>
+    </div>
+  </div>
+  
+  <!-- Submit Location Area -->
+  <div id="submit-box">
+    <button id="contribute" onclick="window.open('https://forms.gle/w6tuHhiKH4URix3u9', '_blank')">
+      Submit a Location
+    </button>
+    <p>Need coordinates? Use <a href="https://www.latlong.net/convert-address-to-lat-long.html" target="_blank">latlong.net</a></p>
+  </div>
+  
+  <!-- Footer -->
+  <footer>
+    Made with ❤️ by <a href="https://github.com/advaniji" target="_blank">Advaniji</a> &nbsp;|&nbsp; OSM borders provided.
+  </footer>
+  
+  <!-- Countdown Timer -->
+  <div id="timer"></div>
+  
+  <script>
+    // Initialize the map
+    const map = L.map('map').setView([22.5, 80], 4);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+    
+    let markers = [];
+    let locations = [];
+    
+    function updateMarkers(filter) {
+      markers.forEach(marker => map.removeLayer(marker));
+      markers = [];
+      locations.forEach(loc => {
+        if ((filter === "all" || loc.type === filter) && loc.lat && loc.lon) {
+          const marker = L.marker([loc.lat, loc.lon]).addTo(map)
+            .bindPopup(`
+              <b>${loc.name}</b><br>
+              Type: ${loc.type}<br>
+              Year: ${loc.year}<br>
+              Info: ${loc.extra}<br>
+              Info 2: ${loc.extra2 || "No second info available"}`);
+          markers.push(marker);
+        }
+      });
+    }
+    
+    function fetchData() {
+      const url = `https://api.allorigins.win/get?url=${encodeURIComponent('https://opensheet.elk.sh/17BZkd2e71TUyHh2KmHfpjz7XXqRXEbh5OvP9mv6wFHM/sheet1')}`;
+      $.getJSON(url)
+        .done(function(response) {
+          const data = JSON.parse(response.contents);
+          console.log("Data fetched successfully:", data);
+          const categories = new Set();
+          let locationsToAdd = [];
+          data.forEach(row => {
+            if (!row.Name) return;
+            const lat = parseFloat(row.Latitude);
+            const lon = parseFloat(row.Longitude);
+            if (!isNaN(lat) && !isNaN(lon)) {
+              const locationData = {
+                name: row.Name,
+                type: row.type || "Other",
+                year: row.year || "Unknown",
+                extra: row['extra info'] || "No additional info",
+                extra2: row['extra info 2'] || "No second info",
+                lat, lon
+              };
+              locationsToAdd.push(locationData);
+              categories.add(locationData.type);
+            } else {
+              console.warn(`Skipping ${row.Name} due to missing coordinates`);
+            }
+          });
+          categories.delete("IVC site");
+          locations = locationsToAdd;
+          updateMarkers("Ramsar Site");
+          const filterDropdown = document.getElementById("filter");
+          filterDropdown.innerHTML = '<option value="Ramsar Site">Ramsar Sites</option>';
+          categories.forEach(category => {
+            const option = document.createElement("option");
+            option.value = category;
+            option.textContent = category;
+            filterDropdown.appendChild(option);
+          });
+        })
+        .fail(function(jqXHR, textStatus, errorThrown) {
+          console.error("Failed to fetch data:", textStatus, errorThrown);
+          alert("Oops! Something went wrong while fetching the data. Please try again later.");
+        });
+    }
+    
+    document.getElementById("filter").addEventListener("change", function() {
+      updateMarkers(this.value);
+    });
+    
+    fetchData();
+    
+    // Countdown timer for CSE Prelims
+    function updateTimer() {
+      const targetDate = new Date('May 25, 2025 06:00:00 GMT+0530');
+      const now = new Date();
+      const timeDiff = targetDate - now;
+      if (timeDiff <= 0) {
+        document.getElementById("timer").innerHTML = "CSE Prelims are here!";
+        return;
+      }
+      const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      document.getElementById("timer").innerHTML = `<b>Time to CSE Prelims: ${days}d ${hours}h</b>`;
+    }
+    
+    setInterval(updateTimer, 1000);
+  </script>
+</body>
+</html>
