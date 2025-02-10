@@ -42,7 +42,7 @@
     header {
       background: var(--header-bg);
       color: #fff;
-      padding: 10px 10px;
+      padding: 10px;
       text-align: center;
       box-shadow: 0 2px 4px rgba(0,0,0,0.2);
       position: relative;
@@ -218,9 +218,8 @@
     <div id="map"></div>
     <div id="map-overlay">
       <label for="filter">Select Category:</label>
-      <select id="filter">
-        <option value="Ramsar Site">Ramsar Sites</option>
-      </select>
+      <!-- Dropdown options will be populated dynamically -->
+      <select id="filter"></select>
     </div>
   </div>
   
@@ -303,15 +302,37 @@
           console.warn(`Skipping ${row.Name} due to missing coordinates`);
         }
       });
+      // Remove any unwanted category
       categories.delete("IVC site");
       locations = locationsToAdd;
-      updateMarkers("Ramsar Site");
+      
+      // Choose a random category as the default filter if available.
+      const categoriesArray = Array.from(categories);
+      let defaultFilter = categoriesArray.length > 0 
+                           ? categoriesArray[Math.floor(Math.random() * categoriesArray.length)]
+                           : "all";
+      updateMarkers(defaultFilter);
+      
       const filterDropdown = document.getElementById("filter");
-      filterDropdown.innerHTML = '<option value="Ramsar Site">Ramsar Sites</option>';
+      filterDropdown.innerHTML = ''; // Clear any pre-existing options
+      
+      // Add an "All Categories" option (not default selected unless no other category exists)
+      const allOption = document.createElement("option");
+      allOption.value = "all";
+      allOption.textContent = "All Categories";
+      if (defaultFilter === "all") {
+        allOption.selected = true;
+      }
+      filterDropdown.appendChild(allOption);
+      
+      // Populate the dropdown with categories from the data and mark the default one as selected.
       categories.forEach(category => {
         const option = document.createElement("option");
         option.value = category;
         option.textContent = category;
+        if (category === defaultFilter) {
+          option.selected = true;
+        }
         filterDropdown.appendChild(option);
       });
     }
