@@ -42,9 +42,10 @@
     header {
       background: var(--header-bg);
       color: #fff;
-      padding: 10px 10px; /* Reduced padding to reduce top space */
+      padding: 10px 10px;
       text-align: center;
       box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      position: relative;
     }
     
     header h1 {
@@ -80,14 +81,14 @@
       position: absolute;
       top: 15px;
       left: 15px;
-      background: rgba(255,255,255,0.85); /* Slightly more transparent */
+      background: rgba(255,255,255,0.85);
       padding: 8px 12px;
       border-radius: 8px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.2);
       font-size: 1em;
       display: flex;
       align-items: center;
-      z-index: 1000;  /* Ensures the overlay stays above the map */
+      z-index: 1000;
     }
     
     #map-overlay label {
@@ -172,8 +173,9 @@
       position: fixed;
       bottom: 20px;
       right: 20px;
+      z-index: 2000;
       font-size: 0.9em;
-      background: rgba(0,0,0,0.6);
+      background: rgba(0, 0, 0, 0.4);
       color: #fff;
       padding: 8px 12px;
       border-radius: 6px;
@@ -194,8 +196,8 @@
       color: var(--text-color);
       border: none;
       box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-      font-size: 0.7em; /* Reduced font size */
-      padding: 2px 4px; /* Reduced padding */
+      font-size: 0.7em;
+      padding: 2px 4px;
       border-radius: 4px;
     }
     
@@ -273,58 +275,96 @@
         }
       });
       
-      // Adjust the map view to include all markers, if any
       if (bounds.length > 0) {
         map.fitBounds(bounds, { padding: [50, 50] });
       }
     }
     
-    // Fetch data using your original logic
+    // Process the fetched data and update the map/filters
+    function processData(data) {
+      const categories = new Set();
+      let locationsToAdd = [];
+      data.forEach(row => {
+        if (!row.Name) return;
+        const lat = parseFloat(row.Latitude);
+        const lon = parseFloat(row.Longitude);
+        if (!isNaN(lat) && !isNaN(lon)) {
+          const locationData = {
+            name: row.Name,
+            type: row.type || "Other",
+            year: row.year || "Unknown",
+            extra: row['extra info'] || "No additional info",
+            extra2: row['extra info 2'] || "No second info",
+            lat, lon
+          };
+          locationsToAdd.push(locationData);
+          categories.add(locationData.type);
+        } else {
+          console.warn(`Skipping ${row.Name} due to missing coordinates`);
+        }
+      });
+      categories.delete("IVC site");
+      locations = locationsToAdd;
+      updateMarkers("Ramsar Site");
+      const filterDropdown = document.getElementById("filter");
+      filterDropdown.innerHTML = '<option value="Ramsar Site">Ramsar Sites</option>';
+      categories.forEach(category => {
+        const option = document.createElement("option");
+        option.value = category;
+        option.textContent = category;
+        filterDropdown.appendChild(option);
+      });
+    }
+    
+    // Fetch data using client-side caching with a 6-hour expiry
     function fetchData() {
       const url = `https://api.allorigins.win/get?url=${encodeURIComponent('https://opensheet.elk.sh/17BZkd2e71TUyHh2KmHfpjz7XXqRXEbh5OvP9mv6wFHM/sheet1')}`;
+      const cachedData = localStorage.getItem('locationsData');
+      const cachedTime = localStorage.getItem('locationsDataTime');
+      const now = Date.now();
+      const sixHours = 6 * 60 * 60 * 1000; // 6 hours in milliseconds
+      
+      if (cachedData && cachedTime && (now - cachedTime < sixHours)) {
+        const data = JSON.parse(cachedData);
+        console.log("Using cached data", data);
+        processData(data);
+        return;
+      }
+      
       $.getJSON(url)
         .done(function(response) {
           const data = JSON.parse(response.contents);
           console.log("Data fetched successfully:", data);
-          const categories = new Set();
-          let locationsToAdd = [];
-          data.forEach(row => {
-            if (!row.Name) return;
-            const lat = parseFloat(row.Latitude);
-            const lon = parseFloat(row.Longitude);
-            if (!isNaN(lat) && !isNaN(lon)) {
-              const locationData = {
-                name: row.Name,
-                type: row.type || "Other",
-                year: row.year || "Unknown",
-                extra: row['extra info'] || "No additional info",
-                extra2: row['extra info 2'] || "No second info",
-                lat, lon
-              };
-              locationsToAdd.push(locationData);
-              categories.add(locationData.type);
-            } else {
-              console.warn(`Skipping ${row.Name} due to missing coordinates`);
-            }
-          });
-          categories.delete("IVC site");
-          locations = locationsToAdd;
-          // Default filter is set to "Ramsar Site" as per your original code
-          updateMarkers("Ramsar Site");
-          const filterDropdown = document.getElementById("filter");
-          filterDropdown.innerHTML = '<option value="Ramsar Site">Ramsar Sites</option>';
-          categories.forEach(category => {
-            const option = document.createElement("option");
-            option.value = category;
-            option.textContent = category;
-            filterDropdown.appendChild(option);
-          });
+          localStorage.setItem('locationsData', JSON.stringify(data));
+          localStorage.setItem('locationsDataTime', now);
+          processData(data);
         })
         .fail(function(jqXHR, textStatus, errorThrown) {
           console.error("Failed to fetch data:", textStatus, errorThrown);
           alert("Oops! Something went wrong while fetching the data. Please try again later.");
         });
     }
+    
+    // Check global version from version.json to force a cache refresh if needed.
+    function checkGlobalVersion() {
+      fetch('/version.json')
+        .then(response => response.json())
+        .then(data => {
+          const globalVersion = data.cacheVersion;
+          const localVersion = localStorage.getItem('cacheVersion');
+          if (globalVersion !== localVersion) {
+            console.log("Global version changed. Clearing cache.");
+            localStorage.removeItem('locationsData');
+            localStorage.removeItem('locationsDataTime');
+            localStorage.setItem('cacheVersion', globalVersion);
+            fetchData();
+          }
+        })
+        .catch(err => console.error("Error fetching global version:", err));
+    }
+    
+    // Call the version check on page load.
+    checkGlobalVersion();
     
     // Listen for dropdown changes
     document.getElementById("filter").addEventListener("change", function() {
@@ -347,6 +387,36 @@
       }
     }
     setInterval(updateTimer, 1000);
+    
+    // Admin-only Force Refresh Button: appears only if URL has ?admin=123 (example secret)
+    function getQueryParam(param) {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get(param);
+    }
+    
+    const adminParam = getQueryParam('admin');
+    if (adminParam === '123') {  // Replace '123' with your chosen secret value.
+      const header = document.querySelector('header');
+      const refreshBtn = document.createElement('button');
+      refreshBtn.textContent = 'Force Refresh All';
+      refreshBtn.style.marginLeft = '20px';
+      refreshBtn.style.padding = '6px 12px';
+      refreshBtn.style.fontSize = '1em';
+      refreshBtn.style.backgroundColor = 'var(--accent-color)';
+      refreshBtn.style.border = 'none';
+      refreshBtn.style.borderRadius = '4px';
+      refreshBtn.style.cursor = 'pointer';
+      refreshBtn.onclick = function() {
+        // Force a new version and clear the cache.
+        const newVersion = Date.now().toString();
+        localStorage.setItem('cacheVersion', newVersion);
+        localStorage.removeItem('locationsData');
+        localStorage.removeItem('locationsDataTime');
+        fetchData();
+        alert('Cache has been refreshed for all users on their next load.');
+      };
+      header.appendChild(refreshBtn);
+    }
   </script>
 </body>
 </html>
