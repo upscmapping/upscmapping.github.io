@@ -6,157 +6,199 @@
   <title>UPSC Mapping (based on PYQ and various test series)</title>
   <link rel="icon" href="advani.png" type="image/png">
   
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  
   <!-- Leaflet and jQuery -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   
   <style>
+    /* CSS Variables for easier color management */
+    :root {
+      --primary-color: #4CAF50;
+      --secondary-color: #2E7D32;
+      --accent-color: #FFC107;
+      --background-color: #f1f1f1;
+      --header-bg: linear-gradient(135deg, #4CAF50, #66BB6A);
+      --footer-bg: #ffffff;
+      --text-color: #333;
+      --tooltip-bg: rgba(255, 255, 255, 0.9);
+    }
+    
     /* Global Styles */
     body {
       margin: 0;
       padding: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: #f1f1f1;
-      color: #333;
+      font-family: 'Roboto', sans-serif;
+      background: var(--background-color);
+      color: var(--text-color);
       display: flex;
       flex-direction: column;
       min-height: 100vh;
-      justify-content: space-between;
     }
-
-    /* Heading and Subheading */
-    #heading {
+    
+    header {
+      background: var(--header-bg);
+      color: #fff;
+      padding: 10px 10px; /* Reduced padding to reduce top space */
       text-align: center;
-      font-size: 1em;
-      font-weight: bold;
-      color: #333;
-      margin: 5px 0;
-      max-width: 80%;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
     }
-
-    #subheading {
-      text-align: center;
-      font-size: 0.6em;
-      font-weight: 400;
-      color: rgba(51, 51, 51, 0.6);
+    
+    header h1 {
       margin: 0;
-      opacity: 0.8;
-      font-style: italic;
-      max-width: 80%;
+      font-size: 2em;
     }
-
-    /* Map Container with overlay */
+    
+    header p {
+      margin: 5px 0 0;
+      font-style: italic;
+      opacity: 0.9;
+    }
+    
+    /* Map Container */
     #map-container {
       position: relative;
-      width: 100%;
+      width: 90%;
       max-width: 1000px;
-      margin: 10px auto;
-    }
-    #map {
-      width: 100%;
-      height: 600px; /* Extended map box */
+      margin: 20px auto;
       background: #fff;
       border-radius: 10px;
       box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      overflow: hidden;
     }
-
-    /* Overlay for the category selector */
+    
+    #map {
+      width: 100%;
+      height: 600px;
+    }
+    
+    /* Map Overlay for Category Selector */
     #map-overlay {
       position: absolute;
-      top: 10px;
-      left: 10px;
-      background: rgba(255,255,255,0.85);
+      top: 15px;
+      left: 15px;
+      background: rgba(255,255,255,0.85); /* Slightly more transparent */
       padding: 8px 12px;
-      border-radius: 4px;
+      border-radius: 8px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-      font-size: 0.9em;
+      font-size: 1em;
       display: flex;
       align-items: center;
-      z-index: 1000;
+      z-index: 1000;  /* Ensures the overlay stays above the map */
     }
+    
     #map-overlay label {
-      margin-right: 8px;
-      font-weight: 600;
-      color: #555;
+      margin-right: 10px;
+      font-weight: 500;
+      color: var(--text-color);
     }
+    
     #map-overlay select {
-      padding: 5px 8px;
-      font-size: 0.9em;
-      border: 1px solid #4CAF50;
+      padding: 6px 10px;
+      font-size: 1em;
+      border: 1px solid var(--primary-color);
       border-radius: 4px;
-      background: #e8f5e9;
+      background: #f9f9f9;
+      transition: background 0.3s;
       outline: none;
     }
-
+    
+    #map-overlay select:hover {
+      background: #e8f5e9;
+    }
+    
     /* Submit Location Box */
     #submit-box {
-      width: 100%;
+      width: 90%;
       max-width: 1000px;
-      margin: 10px auto;
-      padding: 10px;
+      margin: 20px auto;
+      padding: 15px;
       background: #fff;
-      border-top: 1px solid #ddd;
+      border-top: 2px solid #ddd;
       text-align: center;
-      box-shadow: 0 -2px 4px rgba(0,0,0,0.05);
+      border-radius: 0 0 10px 10px;
+      box-shadow: 0 -2px 4px rgba(0,0,0,0.1);
     }
+    
     #submit-box button {
-      padding: 8px 15px;
-      font-size: 1em;
+      padding: 10px 20px;
+      font-size: 1.1em;
       border: none;
       border-radius: 4px;
-      background: #4CAF50;
+      background: var(--primary-color);
       color: #fff;
       cursor: pointer;
-      transition: background 0.3s;
+      transition: background 0.3s, transform 0.3s;
     }
+    
     #submit-box button:hover {
-      background: #45a049;
+      background: var(--secondary-color);
+      transform: scale(1.05);
     }
+    
     #submit-box p {
-      margin: 5px 0 0;
-      font-size: 0.8em;
+      margin: 10px 0 0;
+      font-size: 0.9em;
       color: #777;
     }
-    #submit-box p a {
-      color: #4CAF50;
+    
+    #submit-box a {
+      color: var(--primary-color);
       text-decoration: none;
+      font-weight: 500;
     }
-
+    
     /* Footer */
     footer {
-      background: #fff;
-      border-top: 1px solid #ddd;
+      background: var(--footer-bg);
       text-align: center;
-      padding: 8px 20px;
-      font-size: 0.7em;
+      padding: 15px 10px;
+      font-size: 0.9em;
       color: #777;
+      border-top: 1px solid #ddd;
       margin-top: auto;
     }
+    
     footer a {
-      color: #4CAF50;
+      color: var(--primary-color);
       text-decoration: none;
     }
-
+    
     /* Countdown Timer */
     #timer {
       position: fixed;
-      bottom: 10px;
-      right: 10px;
-      font-size: 0.7em;
-      background: rgba(0,0,0,0.7);
+      bottom: 20px;
+      right: 20px;
+      font-size: 0.9em;
+      background: rgba(0,0,0,0.6);
       color: #fff;
-      padding: 4px 8px;
-      border-radius: 4px;
+      padding: 8px 12px;
+      border-radius: 6px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-    }
-
-    /* Hover effects */
-    .leaflet-marker-icon {
+      opacity: 0.8;
       cursor: pointer;
+      transition: opacity 0.3s, transform 0.3s;
     }
-
-    /* Responsive adjustments */
+    
+    #timer:hover {
+      opacity: 1;
+      transform: scale(1.05);
+    }
+    
+    /* Custom Tooltip Styling for Markers */
+    .leaflet-tooltip-custom {
+      background: var(--tooltip-bg);
+      color: var(--text-color);
+      border: none;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+      font-size: 0.7em; /* Reduced font size */
+      padding: 2px 4px; /* Reduced padding */
+      border-radius: 4px;
+    }
+    
     @media (max-width: 768px) {
       #map {
         height: 400px;
@@ -165,11 +207,11 @@
   </style>
 </head>
 <body>
-  <!-- Heading and Subheading -->
-  <div id="heading">UPSC Mapping</div>
-  <div id="subheading">(Based on PYQ and various test series)</div>
+  <header>
+    <h1>UPSC Mapping</h1>
+    <p>(Based on PYQ and various test series)</p>
+  </header>
   
-  <!-- Map Container with overlayed category selector -->
   <div id="map-container">
     <div id="map"></div>
     <div id="map-overlay">
@@ -180,7 +222,6 @@
     </div>
   </div>
   
-  <!-- Submit Location Area -->
   <div id="submit-box">
     <button id="contribute" onclick="window.open('https://forms.gle/w6tuHhiKH4URix3u9', '_blank')">
       Submit a Location
@@ -188,12 +229,10 @@
     <p>Need coordinates? Use <a href="https://www.latlong.net/convert-address-to-lat-long.html" target="_blank">latlong.net</a></p>
   </div>
   
-  <!-- Footer -->
   <footer>
     Made with ❤️ by <a href="https://github.com/advaniji" target="_blank">Advaniji</a> &nbsp;|&nbsp; OSM borders provided.
   </footer>
   
-  <!-- Countdown Timer -->
   <div id="timer"></div>
   
   <script>
@@ -206,23 +245,41 @@
     let markers = [];
     let locations = [];
     
+    // Update markers and adjust map bounds dynamically
     function updateMarkers(filter) {
       markers.forEach(marker => map.removeLayer(marker));
       markers = [];
+      let bounds = [];
+      
       locations.forEach(loc => {
         if ((filter === "all" || loc.type === filter) && loc.lat && loc.lon) {
           const marker = L.marker([loc.lat, loc.lon]).addTo(map)
-            .bindPopup(`
-              <b>${loc.name}</b><br>
+            .bindPopup(
+              `<b>${loc.name}</b><br>
               Type: ${loc.type}<br>
               Year: ${loc.year}<br>
               Info: ${loc.extra}<br>
-              Info 2: ${loc.extra2 || "No second info available"}`);
+              Info 2: ${loc.extra2 || "No second info available"}`
+            );
+          // Add a permanent tooltip with the place's name
+          marker.bindTooltip(`${loc.name}`, {
+            permanent: true,
+            direction: 'top',
+            offset: [0, -5],
+            className: 'leaflet-tooltip-custom'
+          });
           markers.push(marker);
+          bounds.push(marker.getLatLng());
         }
       });
+      
+      // Adjust the map view to include all markers, if any
+      if (bounds.length > 0) {
+        map.fitBounds(bounds, { padding: [50, 50] });
+      }
     }
     
+    // Fetch data using your original logic
     function fetchData() {
       const url = `https://api.allorigins.win/get?url=${encodeURIComponent('https://opensheet.elk.sh/17BZkd2e71TUyHh2KmHfpjz7XXqRXEbh5OvP9mv6wFHM/sheet1')}`;
       $.getJSON(url)
@@ -252,6 +309,7 @@
           });
           categories.delete("IVC site");
           locations = locationsToAdd;
+          // Default filter is set to "Ramsar Site" as per your original code
           updateMarkers("Ramsar Site");
           const filterDropdown = document.getElementById("filter");
           filterDropdown.innerHTML = '<option value="Ramsar Site">Ramsar Sites</option>';
@@ -268,26 +326,26 @@
         });
     }
     
+    // Listen for dropdown changes
     document.getElementById("filter").addEventListener("change", function() {
       updateMarkers(this.value);
     });
     
     fetchData();
     
-    // Countdown timer for CSE Prelims
+    // Countdown Timer (using your original logic)
+    const examDate = new Date("2025-06-04T00:00:00");
     function updateTimer() {
-      const targetDate = new Date('May 25, 2025 06:00:00 GMT+0530');
       const now = new Date();
-      const timeDiff = targetDate - now;
-      if (timeDiff <= 0) {
-        document.getElementById("timer").innerHTML = "CSE Prelims are here!";
-        return;
+      const timeRemaining = examDate - now;
+      if (timeRemaining <= 0) {
+        document.getElementById("timer").innerHTML = "Exam Day!";
+      } else {
+        const days = Math.floor(timeRemaining / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((timeRemaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        document.getElementById("timer").innerHTML = `Time left: ${days}d ${hours}h`;
       }
-      const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      document.getElementById("timer").innerHTML = `<b>Time to CSE Prelims: ${days}d ${hours}h</b>`;
     }
-    
     setInterval(updateTimer, 1000);
   </script>
 </body>
