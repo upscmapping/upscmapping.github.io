@@ -1,19 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>UPSC Mapping (based on PYQ and various test series)</title>
+  <meta name="description" content="UPSC Mapping provides geographical insights based on PYQ and various test series.">
+  <meta name="author" content="Advaniji">
+  <!-- Open Graph Meta Tags -->
+  <meta property="og:title" content="UPSC Mapping">
+  <meta property="og:description" content="Geographical insights based on PYQ and various test series.">
+  <meta property="og:image" content="advani.png">
+  <meta property="og:type" content="website">
   <link rel="icon" href="advani.png" type="image/png">
   
   <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   
-  <!-- Leaflet and jQuery -->
+  <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  
+
   <style>
     /* CSS Variables for easier color management */
     :root {
@@ -25,6 +30,19 @@
       --footer-bg: #ffffff;
       --text-color: #333;
       --tooltip-bg: rgba(255, 255, 255, 0.9);
+    }
+    
+    /* Dark Mode Variables */
+    body.dark-mode {
+      --primary-color: #81c784;
+      --secondary-color: #66bb6a;
+      --accent-color: #ffb74d;
+      --background-color: #333;
+      /* Changed header gradient to a more neutral dark tone */
+      --header-bg: linear-gradient(135deg, #555, #222);
+      --footer-bg: #424242;
+      --text-color: #eee;
+      --tooltip-bg: rgba(50, 50, 50, 0.9);
     }
     
     /* Global Styles */
@@ -46,6 +64,11 @@
       text-align: center;
       box-shadow: 0 2px 4px rgba(0,0,0,0.2);
       position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      transition: background 0.3s ease; /* Smooth transition for header background */
     }
     
     header h1 {
@@ -57,6 +80,17 @@
       margin: 5px 0 0;
       font-style: italic;
       opacity: 0.9;
+    }
+    
+    /* Dark mode toggle button in header */
+    #darkModeToggle {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: transparent;
+      border: none;
+      font-size: 1.2em;
+      cursor: pointer;
     }
     
     /* Map Container */
@@ -206,25 +240,55 @@
         height: 400px;
       }
     }
+    
+    /* Fallback message styling */
+    #fallback-message {
+      position: fixed;
+      top: 20%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #ffeb3b;
+      color: #333;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+      font-size: 1.2em;
+      z-index: 3000;
+      display: none;
+    }
+
+    /* CSS class for popup images; ensures large images are resized optimally */
+    .popup-image {
+      max-width: 100px;
+      max-height: 100px;
+      width: auto;
+      height: auto;
+      display: block;
+      margin: 5px 0;
+      border-radius: 4px;
+      object-fit: cover;
+    }
   </style>
 </head>
 <body>
   <header>
     <h1>UPSC Mapping</h1>
     <p>(Based on PYQ and various test series)</p>
+    <!-- Dark Mode Toggle with text and emoji -->
+    <button id="darkModeToggle" aria-label="Toggle Dark Mode" tabindex="0">Dark Mode 🌙</button>
   </header>
   
   <div id="map-container">
     <div id="map"></div>
     <div id="map-overlay">
       <label for="filter">Select Category:</label>
-      <!-- Dropdown options will be populated dynamically -->
-      <select id="filter"></select>
+      <!-- Dropdown with ARIA label for accessibility -->
+      <select id="filter" aria-label="Filter categories" tabindex="0"></select>
     </div>
   </div>
   
   <div id="submit-box">
-    <button id="contribute" onclick="window.open('https://forms.gle/w6tuHhiKH4URix3u9', '_blank')">
+    <button id="contribute" onclick="window.open('https://forms.gle/w6tuHhiKH4URix3u9', '_blank')" aria-label="Submit a Location" tabindex="0">
       Submit a Location
     </button>
     <p>Need coordinates? Use <a href="https://www.latlong.net/convert-address-to-lat-long.html" target="_blank">latlong.net</a></p>
@@ -234,181 +298,222 @@
     Made with ❤️ by <a href="https://github.com/advaniji" target="_blank">Advaniji</a> &nbsp;|&nbsp; OSM borders provided.
   </footer>
   
-  <div id="timer"></div>
+  <div id="timer" tabindex="0"></div>
+  <!-- Fallback message for core functionality errors -->
+  <div id="fallback-message" role="alert" tabindex="0"></div>
+  
+  <!-- Leaflet and jQuery Scripts -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   
   <script>
-    // Initialize the map
-    const map = L.map('map').setView([22.5, 80], 4);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors'
-    }).addTo(map);
-    
-    let markers = [];
-    let locations = [];
-    
-    // Update markers and adjust map bounds dynamically
-    function updateMarkers(filter) {
-      markers.forEach(marker => map.removeLayer(marker));
-      markers = [];
-      let bounds = [];
-      
-      locations.forEach(loc => {
-        if ((filter === "all" || loc.type === filter) && loc.lat && loc.lon) {
-          const marker = L.marker([loc.lat, loc.lon]).addTo(map)
-            .bindPopup(
-              `<b>${loc.name}</b><br>
-              Type: ${loc.type}<br>
-              Year: ${loc.year}<br>
-              Info: ${loc.extra}<br>
-              Info 2: ${loc.extra2 || "No second info available"}`
-            );
-          // Add a permanent tooltip with the place's name
-          marker.bindTooltip(`${loc.name}`, {
-            permanent: true,
-            direction: 'top',
-            offset: [0, -5],
-            className: 'leaflet-tooltip-custom'
-          });
-          markers.push(marker);
-          bounds.push(marker.getLatLng());
-        }
-      });
-      
-      if (bounds.length > 0) {
-        map.fitBounds(bounds, { padding: [50, 50] });
-      }
-    }
-    
-    // Process the fetched data and update the map/filters
-    function processData(data) {
-      const categories = new Set();
-      let locationsToAdd = [];
-      data.forEach(row => {
-        if (!row.Name) return;
-        const lat = parseFloat(row.Latitude);
-        const lon = parseFloat(row.Longitude);
-        if (!isNaN(lat) && !isNaN(lon)) {
-          const locationData = {
-            name: row.Name,
-            type: row.type || "Other",
-            year: row.year || "Unknown",
-            extra: row['extra info'] || "No additional info",
-            extra2: row['extra info 2'] || "No second info",
-            lat, lon
-          };
-          locationsToAdd.push(locationData);
-          categories.add(locationData.type);
-        } else {
-          console.warn(`Skipping ${row.Name} due to missing coordinates`);
-        }
-      });
-      // Remove any unwanted category
-      categories.delete("IVC site");
-      locations = locationsToAdd;
-      
-      // Choose a random category as the default filter if available.
-      const categoriesArray = Array.from(categories);
-      let defaultFilter = categoriesArray.length > 0 
-                           ? categoriesArray[Math.floor(Math.random() * categoriesArray.length)]
-                           : "all";
-      updateMarkers(defaultFilter);
-      
-      const filterDropdown = document.getElementById("filter");
-      filterDropdown.innerHTML = ''; // Clear any pre-existing options
-      
-      // Add an "All Categories" option
-      const allOption = document.createElement("option");
-      allOption.value = "all";
-      allOption.textContent = "All Categories";
-      if (defaultFilter === "all") {
-        allOption.selected = true;
-      }
-      filterDropdown.appendChild(allOption);
-      
-      // Populate the dropdown with categories from the data
-      categories.forEach(category => {
-        const option = document.createElement("option");
-        option.value = category;
-        option.textContent = category;
-        if (category === defaultFilter) {
-          option.selected = true;
-        }
-        filterDropdown.appendChild(option);
-      });
-    }
-    
-    // Function to fetch data using direct access first, then fallback proxies
-    async function fetchDataWithFallback() {
-      // The target URL to fetch data from
-      const targetUrl = 'https://opensheet.elk.sh/17BZkd2e71TUyHh2KmHfpjz7XXqRXEbh5OvP9mv6wFHM/sheet1';
-      
-      // Array of URLs in order:
-      // 1. Direct access
-      // 2. Your Cloudflare Worker proxy
-      // 3. ThingProxy
-      const fetchUrls = [
-        targetUrl,
-        `https://crosbc.advaniji96.workers.dev/?url=${encodeURIComponent(targetUrl)}`,
-        `https://thingproxy.freeboard.io/fetch/${targetUrl}`
-      ];
-      
-      let lastError = null;
-      
-      for (const url of fetchUrls) {
-        try {
-          const response = await fetch(url);
-          if (response.ok) {
-            // Assuming the response is JSON; change to response.text() if needed
-            const data = await response.json();
-            console.log(`Success with URL: ${url}`);
-            return data;
-          } else {
-            console.warn(`URL returned error: ${response.status} ${response.statusText} for ${url}`);
-            lastError = new Error(`Error ${response.status}: ${response.statusText}`);
-          }
-        } catch (error) {
-          console.error(`Fetch error with URL ${url}:`, error);
-          lastError = error;
-        }
-      }
-      throw lastError;
-    }
-    
-    // Function to fetch the data and process it
-    function fetchData() {
-      fetchDataWithFallback()
-        .then(data => {
-          console.log("Data fetched:", data);
-          processData(data);
-        })
-        .catch(err => {
-          console.error("Failed to fetch data using proxies:", err);
-          alert("Oops! Something went wrong while fetching data. Please try again later.");
-        });
-    }
-    
-    // Listen for dropdown changes
-    document.getElementById("filter").addEventListener("change", function() {
-      updateMarkers(this.value);
-    });
-    
-    // Countdown Timer
-    const examDate = new Date("2025-05-25T00:00:00");
-    function updateTimer() {
-      const now = new Date();
-      const timeRemaining = examDate - now;
-      if (timeRemaining <= 0) {
-        document.getElementById("timer").innerHTML = "Exam Day!";
+    document.addEventListener('DOMContentLoaded', function () {
+      // Dark Mode Toggle with localStorage support and text+emoji
+      const darkModeToggle = document.getElementById('darkModeToggle');
+      const currentTheme = localStorage.getItem('theme');
+      if (currentTheme === 'dark') {
+        document.body.classList.add('dark-mode');
+        darkModeToggle.innerHTML = 'Light Mode ☀️';  // Dark mode active; clicking switches to light mode
       } else {
-        const days = Math.floor(timeRemaining / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((timeRemaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        document.getElementById("timer").innerHTML = `Time left for Prelims: ${days}d ${hours}h`;
+        darkModeToggle.innerHTML = 'Dark Mode 🌙';
       }
-    }
-    setInterval(updateTimer, 1000);
     
-    // Initial data fetch
-    fetchData();
+      darkModeToggle.addEventListener('click', function() {
+        document.body.classList.toggle('dark-mode');
+        if(document.body.classList.contains('dark-mode')) {
+           localStorage.setItem('theme', 'dark');
+           darkModeToggle.innerHTML = 'Light Mode ☀️';
+        } else {
+           localStorage.setItem('theme', 'light');
+           darkModeToggle.innerHTML = 'Dark Mode 🌙';
+        }
+      });
+    
+      // Initialize the map
+      const map = L.map('map').setView([22.5, 80], 4);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+      }).addTo(map);
+    
+      let markers = [];
+      let locations = [];
+    
+      // Update markers and adjust map bounds dynamically
+      function updateMarkers(filter) {
+        markers.forEach(marker => map.removeLayer(marker));
+        markers = [];
+        let bounds = [];
+    
+        locations.forEach(loc => {
+          if ((filter === "all" || loc.type === filter) && loc.lat && loc.lon) {
+            // Log whether we have an image for this location.
+            if (loc.image && loc.image.trim() !== "") {
+              console.log("Using image for location:", loc.name, loc.image);
+            } else {
+              console.log("No image for location:", loc.name);
+            }
+    
+            // If an image URL exists and is non-empty, include it; otherwise, leave blank.
+            const imageHTML = (loc.image && loc.image.trim() !== "")
+              ? `<img src="${loc.image}" alt="${loc.name} image" class="popup-image" loading="lazy" onerror="this.onerror=null; this.src='https://via.placeholder.com/100?text=No+Image';">`
+              : "";
+    
+            const popupContent = `<b>${loc.name}</b><br>
+                                  ${imageHTML}
+                                  Type: ${loc.type}<br>
+                                  Year: ${loc.year}<br>
+                                  Info: ${loc.extra}<br>
+                                  Info 2: ${loc.extra2 || "No second info available"}`;
+    
+            const marker = L.marker([loc.lat, loc.lon]).addTo(map)
+              .bindPopup(popupContent);
+    
+            // Add a permanent tooltip with the place's name
+            marker.bindTooltip(`${loc.name}`, {
+              permanent: true,
+              direction: 'top',
+              offset: [0, -5],
+              className: 'leaflet-tooltip-custom'
+            });
+            markers.push(marker);
+            bounds.push(marker.getLatLng());
+          }
+        });
+    
+        if (bounds.length > 0) {
+          map.fitBounds(bounds, { padding: [50, 50] });
+        }
+      }
+    
+      // Process fetched data and update the map/filters
+      function processData(data) {
+        const categories = new Set();
+        let locationsToAdd = [];
+        data.forEach(row => {
+          console.log("Processing row:", row);
+          console.log("Image field:", row["Image"]);
+          if (!row.Name) return;
+          const lat = parseFloat(row.Latitude);
+          const lon = parseFloat(row.Longitude);
+          if (!isNaN(lat) && !isNaN(lon)) {
+            const locationData = {
+              name: row.Name,
+              type: row.type || "Other",
+              year: row.year || "Unknown",
+              extra: row['extra info'] || "No additional info",
+              extra2: row['extra info 2'] || "No second info",
+              image: row['Image'] || null, // Optional image column from Google Sheet
+              lat, lon
+            };
+            locationsToAdd.push(locationData);
+            categories.add(locationData.type);
+          } else {
+            console.warn(`Skipping ${row.Name} due to missing coordinates`);
+          }
+        });
+        // Remove unwanted category if present (e.g., "IVC site"). Remove this line if not needed.
+        categories.delete("IVC site");
+        // Assign the processed locations to our global variable.
+        locations = locationsToAdd;
+    
+        // Choose a random category as the default filter if available.
+        const categoriesArray = Array.from(categories);
+        let defaultFilter = categoriesArray.length > 0 
+                             ? categoriesArray[Math.floor(Math.random() * categoriesArray.length)]
+                             : "all";
+        updateMarkers(defaultFilter);
+    
+        const filterDropdown = document.getElementById("filter");
+        filterDropdown.innerHTML = ''; // Clear any pre-existing options
+    
+        // Add an "All Categories" option
+        const allOption = document.createElement("option");
+        allOption.value = "all";
+        allOption.textContent = "All Categories";
+        if (defaultFilter === "all") {
+          allOption.selected = true;
+        }
+        filterDropdown.appendChild(allOption);
+    
+        // Populate the dropdown with categories from the data
+        categories.forEach(category => {
+          const option = document.createElement("option");
+          option.value = category;
+          option.textContent = category;
+          if (category === defaultFilter) {
+            option.selected = true;
+          }
+          filterDropdown.appendChild(option);
+        });
+      }
+    
+      // Function to fetch data using direct access first, then fallback proxies
+      async function fetchDataWithFallback() {
+        const targetUrl = 'https://opensheet.elk.sh/17BZkd2e71TUyHh2KmHfpjz7XXqRXEbh5OvP9mv6wFHM/sheet1';
+        const fetchUrls = [
+          targetUrl,
+          `https://crosbc.advaniji96.workers.dev/?url=${encodeURIComponent(targetUrl)}`,
+          `https://thingproxy.freeboard.io/fetch/${targetUrl}`
+        ];
+        let lastError = null;
+    
+        for (const url of fetchUrls) {
+          try {
+            const response = await fetch(url);
+            if (response.ok) {
+              const data = await response.json();
+              console.log(`Success with URL: ${url}`);
+              return data;
+            } else {
+              console.warn(`URL returned error: ${response.status} ${response.statusText} for ${url}`);
+              lastError = new Error(`Error ${response.status}: ${response.statusText}`);
+            }
+          } catch (error) {
+            console.error(`Fetch error with URL ${url}:`, error);
+            lastError = error;
+          }
+        }
+        throw lastError;
+      }
+    
+      // Function to fetch the data and process it
+      function fetchData() {
+        fetchDataWithFallback()
+          .then(data => {
+            console.log("Data fetched:", data);
+            processData(data);
+          })
+          .catch(err => {
+            console.error("Failed to fetch data using proxies:", err);
+            // Show fallback message with a chariot emoji
+            const fallbackMessage = document.getElementById("fallback-message");
+            fallbackMessage.innerHTML = 'Advaniji is busy organizing next Rath Yatra, please try later 🐎';
+            fallbackMessage.style.display = "block";
+          });
+      }
+    
+      // Listen for dropdown changes
+      document.getElementById("filter").addEventListener("change", function() {
+        updateMarkers(this.value);
+      });
+    
+      // Countdown Timer
+      const examDate = new Date("2025-05-25T00:00:00");
+      function updateTimer() {
+        const now = new Date();
+        const timeRemaining = examDate - now;
+        if (timeRemaining <= 0) {
+          document.getElementById("timer").innerHTML = "Exam Day!";
+        } else {
+          const days = Math.floor(timeRemaining / (1000 * 60 * 60 * 24));
+          const hours = Math.floor((timeRemaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+          document.getElementById("timer").innerHTML = `Time left for Prelims: ${days}d ${hours}h`;
+        }
+      }
+      setInterval(updateTimer, 1000);
+      // Initial data fetch
+      fetchData();
+    });
   </script>
 </body>
 </html>
