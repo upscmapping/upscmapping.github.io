@@ -366,33 +366,14 @@
         });
     }
     
-    // Check global version from version.json to force a cache refresh if needed.
-    function checkGlobalVersion() {
-      fetch('/version.json')
-        .then(response => response.json())
-        .then(data => {
-          const globalVersion = data.cacheVersion;
-          const localVersion = localStorage.getItem('cacheVersion');
-          if (globalVersion !== localVersion) {
-            console.log("Global version changed. Clearing cache.");
-            localStorage.removeItem('locationsData');
-            localStorage.removeItem('locationsDataTime');
-            localStorage.setItem('cacheVersion', globalVersion);
-            fetchData();
-          }
-        })
-        .catch(err => console.error("Error fetching global version:", err));
-    }
-    
-    // Call the version check on page load.
-    checkGlobalVersion();
+    // Removed the global version check code as version.json has been deleted.
+    // Simply call fetchData on page load.
+    fetchData();
     
     // Listen for dropdown changes
     document.getElementById("filter").addEventListener("change", function() {
       updateMarkers(this.value);
     });
-    
-    fetchData();
     
     // Countdown Timer (using your original logic)
     const examDate = new Date("2025-05-25T00:00:00");
@@ -428,9 +409,6 @@
       refreshBtn.style.borderRadius = '4px';
       refreshBtn.style.cursor = 'pointer';
       refreshBtn.onclick = function() {
-        // Force a new version and clear the cache.
-        const newVersion = Date.now().toString();
-        localStorage.setItem('cacheVersion', newVersion);
         localStorage.removeItem('locationsData');
         localStorage.removeItem('locationsDataTime');
         fetchData();
