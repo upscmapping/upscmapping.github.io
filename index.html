@@ -316,7 +316,7 @@
       const filterDropdown = document.getElementById("filter");
       filterDropdown.innerHTML = ''; // Clear any pre-existing options
       
-      // Add an "All Categories" option (not default selected unless no other category exists)
+      // Add an "All Categories" option
       const allOption = document.createElement("option");
       allOption.value = "all";
       allOption.textContent = "All Categories";
@@ -325,7 +325,7 @@
       }
       filterDropdown.appendChild(allOption);
       
-      // Populate the dropdown with categories from the data and mark the default one as selected.
+      // Populate the dropdown with categories from the data
       categories.forEach(category => {
         const option = document.createElement("option");
         option.value = category;
@@ -337,45 +337,62 @@
       });
     }
     
-    // Fetch data using client-side caching with a 6-hour expiry
-    function fetchData() {
-      const url = `https://api.allorigins.win/get?url=${encodeURIComponent('https://opensheet.elk.sh/17BZkd2e71TUyHh2KmHfpjz7XXqRXEbh5OvP9mv6wFHM/sheet1')}`;
-      const cachedData = localStorage.getItem('locationsData');
-      const cachedTime = localStorage.getItem('locationsDataTime');
-      const now = Date.now();
-      const sixHours = 6 * 60 * 60 * 1000; // 6 hours in milliseconds
+    // Function to fetch data using direct access first, then fallback proxies
+    async function fetchDataWithFallback() {
+      // The target URL to fetch data from
+      const targetUrl = 'https://opensheet.elk.sh/17BZkd2e71TUyHh2KmHfpjz7XXqRXEbh5OvP9mv6wFHM/sheet1';
       
-      if (cachedData && cachedTime && (now - cachedTime < sixHours)) {
-        const data = JSON.parse(cachedData);
-        console.log("Using cached data", data);
-        processData(data);
-        return;
+      // Array of URLs in order:
+      // 1. Direct access
+      // 2. Your Cloudflare Worker proxy
+      // 3. ThingProxy
+      const fetchUrls = [
+        targetUrl,
+        `https://crosbc.advaniji96.workers.dev/?url=${encodeURIComponent(targetUrl)}`,
+        `https://thingproxy.freeboard.io/fetch/${targetUrl}`
+      ];
+      
+      let lastError = null;
+      
+      for (const url of fetchUrls) {
+        try {
+          const response = await fetch(url);
+          if (response.ok) {
+            // Assuming the response is JSON; change to response.text() if needed
+            const data = await response.json();
+            console.log(`Success with URL: ${url}`);
+            return data;
+          } else {
+            console.warn(`URL returned error: ${response.status} ${response.statusText} for ${url}`);
+            lastError = new Error(`Error ${response.status}: ${response.statusText}`);
+          }
+        } catch (error) {
+          console.error(`Fetch error with URL ${url}:`, error);
+          lastError = error;
+        }
       }
-      
-      $.getJSON(url)
-        .done(function(response) {
-          const data = JSON.parse(response.contents);
-          console.log("Data fetched successfully:", data);
-          localStorage.setItem('locationsData', JSON.stringify(data));
-          localStorage.setItem('locationsDataTime', now);
-          processData(data);
-        })
-        .fail(function(jqXHR, textStatus, errorThrown) {
-          console.error("Failed to fetch data:", textStatus, errorThrown);
-          alert("Oops! Something went wrong while fetching the data. Please try again later.");
-        });
+      throw lastError;
     }
     
-    // Removed the global version check code as version.json has been deleted.
-    // Simply call fetchData on page load.
-    fetchData();
+    // Function to fetch the data and process it
+    function fetchData() {
+      fetchDataWithFallback()
+        .then(data => {
+          console.log("Data fetched:", data);
+          processData(data);
+        })
+        .catch(err => {
+          console.error("Failed to fetch data using proxies:", err);
+          alert("Oops! Something went wrong while fetching data. Please try again later.");
+        });
+    }
     
     // Listen for dropdown changes
     document.getElementById("filter").addEventListener("change", function() {
       updateMarkers(this.value);
     });
     
-    // Countdown Timer (using your original logic)
+    // Countdown Timer
     const examDate = new Date("2025-05-25T00:00:00");
     function updateTimer() {
       const now = new Date();
@@ -390,32 +407,8 @@
     }
     setInterval(updateTimer, 1000);
     
-    // Admin-only Force Refresh Button: appears only if URL has ?admin=123 (example secret)
-    function getQueryParam(param) {
-      const urlParams = new URLSearchParams(window.location.search);
-      return urlParams.get(param);
-    }
-    
-    const adminParam = getQueryParam('admin');
-    if (adminParam === '123') {  // Replace '123' with your chosen secret value.
-      const header = document.querySelector('header');
-      const refreshBtn = document.createElement('button');
-      refreshBtn.textContent = 'Force Refresh All';
-      refreshBtn.style.marginLeft = '20px';
-      refreshBtn.style.padding = '6px 12px';
-      refreshBtn.style.fontSize = '1em';
-      refreshBtn.style.backgroundColor = 'var(--accent-color)';
-      refreshBtn.style.border = 'none';
-      refreshBtn.style.borderRadius = '4px';
-      refreshBtn.style.cursor = 'pointer';
-      refreshBtn.onclick = function() {
-        localStorage.removeItem('locationsData');
-        localStorage.removeItem('locationsDataTime');
-        fetchData();
-        alert('Cache has been refreshed for all users on their next load.');
-      };
-      header.appendChild(refreshBtn);
-    }
+    // Initial data fetch
+    fetchData();
   </script>
 </body>
 </html>
