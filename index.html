@@ -1,256 +1,504 @@
-import os
-import json
-import requests
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
-from pyrogram import Client, filters
-from pyrogram.types import ReplyKeyboardMarkup, KeyboardButton
-from threading import Thread
-from flask import Flask
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>UPSC Mapping</title>
+  <meta name="description" content="UPSC Mapping provides geographical insights based on PYQ and various test series.">
+  <meta name="author" content="Advaniji">
+  <!-- Open Graph Meta Tags -->
+  <meta property="og:title" content="UPSC Mapping by Advaniji">
+  <meta property="og:description" content="Geographical insights based on PYQ and various test series.">
+  <meta property="og:image" content="advani.png">
+  <meta property="og:type" content="website">
+  <link rel="icon" href="advani.png" type="image/png">
+  
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 
-# ---------------------------
-# Pyrogram Bot Setup
-# ---------------------------
-BOT_TOKEN = os.getenv("BOT_TOKEN", "YOUR_BOT_TOKEN_HERE")
-API_ID = int(os.getenv("API_ID", "YOUR_API_ID_HERE"))
-API_HASH = os.getenv("API_HASH", "YOUR_API_HASH_HERE")
-
-app = Client("location_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
-
-# ---------------------------
-# Conversation State Setup
-# ---------------------------
-user_state = {}
-
-# Conversation state constants
-STATE_NAME = 1
-STATE_ADDRESS = 2
-STATE_TYPE = 3
-STATE_YEAR = 4
-STATE_EXTRA = 5
-STATE_EXTRA2 = 6
-
-# Options for type and year
-TYPE_OPTIONS = [
-    "Hydroelectric Plants", "Ramsar sites", "IVC Site", "Historical Port",
-    "Lakes", "Places in news", "Places in news (IR)", "temples", "other"
-]
-YEAR_OPTIONS = ["test series", "PYQ"]
-
-def reset_state(chat_id):
-    """Reset conversation state for the given chat."""
-    user_state[chat_id] = {
-        "state": None,
-        "name": None,
-        "address": None,
-        "type": None,
-        "year": None,
-        "extra info": None,
-        "extra info 2": None
+  <style>
+    /* CSS Variables for easier color management */
+    :root {
+      --primary-color: #4CAF50;
+      --secondary-color: #2E7D32;
+      --accent-color: #FFC107;
+      --background-color: #f1f1f1;
+      --header-bg: linear-gradient(135deg, #4CAF50, #66BB6A);
+      --footer-bg: #ffffff;
+      --text-color: #333;
+      --tooltip-bg: rgba(255, 255, 255, 0.9);
+    }
+    
+    /* Dark Mode Variables */
+    body.dark-mode {
+      --primary-color: #81c784;
+      --secondary-color: #66bb6a;
+      --accent-color: #ffb74d;
+      --background-color: #333;
+      --header-bg: linear-gradient(135deg, #555, #222);
+      --footer-bg: #424242;
+      --text-color: #eee;
+      --tooltip-bg: rgba(50, 50, 50, 0.9);
+    }
+    
+    /* Global Styles */
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Roboto', sans-serif;
+      background: var(--background-color);
+      color: var(--text-color);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      transition: background 0.3s, color 0.3s;
+    }
+    
+    header {
+      background: var(--header-bg);
+      color: #fff;
+      padding: 10px;
+      text-align: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      transition: background 0.3s;
+    }
+    
+    header h1 {
+      margin: 0;
+      font-size: 2em;
+    }
+    
+    header p {
+      margin: 5px 0 0;
+      font-style: italic;
+      opacity: 0.9;
+    }
+    
+    /* Dark mode toggle button in header */
+    #dark-mode-toggle {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: transparent;
+      border: none;
+      font-size: 1.2em;
+      cursor: pointer;
+    }
+    
+    /* Map Container */
+    #map-container {
+      position: relative;
+      width: 90%;
+      max-width: 1000px;
+      margin: 20px auto;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    
+    #map {
+      width: 100%;
+      height: 600px;
+    }
+    
+    /* Map Overlay for Category Selector */
+    #map-overlay {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      background: rgba(255,255,255,0.85);
+      padding: 8px 12px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      font-size: 1em;
+      display: flex;
+      align-items: center;
+      z-index: 1000;
+    }
+    
+    #map-overlay label {
+      margin-right: 10px;
+      font-weight: 500;
+      color: var(--text-color);
+    }
+    
+    #map-overlay select {
+      padding: 6px 10px;
+      font-size: 1em;
+      border: 1px solid var(--primary-color);
+      border-radius: 4px;
+      background: #f9f9f9;
+      transition: background 0.3s;
+      outline: none;
+    }
+    
+    #map-overlay select:hover {
+      background: #e8f5e9;
+    }
+    
+    /* Submit Location Box */
+    #submit-box {
+      width: 90%;
+      max-width: 1000px;
+      margin: 20px auto;
+      padding: 15px;
+      background: #fff;
+      border-top: 2px solid #ddd;
+      text-align: center;
+      border-radius: 0 0 10px 10px;
+      box-shadow: 0 -2px 4px rgba(0,0,0,0.1);
+    }
+    
+    #submit-box button {
+      padding: 10px 20px;
+      font-size: 1.1em;
+      border: none;
+      border-radius: 4px;
+      background: var(--primary-color);
+      color: #fff;
+      cursor: pointer;
+      transition: background 0.3s, transform 0.3s;
+    }
+    
+    #submit-box button:hover {
+      background: var(--secondary-color);
+      transform: scale(1.05);
+    }
+    
+    #submit-box p {
+      margin: 10px 0 0;
+      font-size: 0.9em;
+      color: #777;
+    }
+    
+    #submit-box a {
+      color: var(--primary-color);
+      text-decoration: none;
+      font-weight: 500;
+    }
+    
+    /* Footer */
+    footer {
+      background: var(--footer-bg);
+      text-align: center;
+      padding: 15px 10px;
+      font-size: 0.9em;
+      color: #777;
+      border-top: 1px solid #ddd;
+      margin-top: auto;
+    }
+    
+    footer a {
+      color: var(--primary-color);
+      text-decoration: none;
+    }
+    
+    /* Countdown Timer */
+    #timer {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 2000;
+      font-size: 0.9em;
+      background: rgba(0, 0, 0, 0.4);
+      color: #fff;
+      padding: 8px 12px;
+      border-radius: 6px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+      opacity: 0.8;
+      cursor: pointer;
+      transition: opacity 0.3s, transform 0.3s;
+    }
+    
+    #timer:hover {
+      opacity: 1;
+      transform: scale(1.05);
+    }
+    
+    /* Custom Tooltip Styling for Markers */
+    .leaflet-tooltip-custom {
+      background: var(--tooltip-bg);
+      color: var(--text-color);
+      border: none;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+      font-size: 0.7em;
+      padding: 2px 4px;
+      border-radius: 4px;
+    }
+    
+    @media (max-width: 768px) {
+      #map {
+        height: 400px;
+      }
+    }
+    
+    /* Fallback message styling */
+    #fallback-message {
+      position: fixed;
+      top: 20%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #ffeb3b;
+      color: #333;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+      font-size: 1.2em;
+      z-index: 3000;
+      display: none;
     }
 
-# ---------------------------
-# Google Sheets Integration
-# ---------------------------
-def push_to_sheet(entry):
-    """
-    Push the provided entry to the "Crowd" worksheet within the overall
-    spreadsheet named "mapping". If the "Crowd" worksheet is empty, headers
-    are added automatically.
-    """
-    scope = ["https://spreadsheets.google.com/feeds",
-             "https://www.googleapis.com/auth/drive"]
-    # Load credentials from your JSON file
-    creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
-    client = gspread.authorize(creds)
-    
-    # Open the overall spreadsheet named "mapping"
-    spreadsheet = client.open("mapping")
-    
-    # Open the worksheet named "Crowd"
-    crowd_sheet = spreadsheet.worksheet("Crowd")
-    
-    # Optional: If the sheet is empty, insert headers.
-    if not crowd_sheet.get_all_values():
-        headers = ["Name", "Latitude", "Longitude", "type", "year", "extra info", "extra info 2", "Image"]
-        crowd_sheet.append_row(headers)
-    
-    # Prepare the row data using provided entry values
-    row = [
-        entry.get("Name", ""),
-        entry.get("Latitude", ""),
-        entry.get("Longitude", ""),
-        entry.get("type", ""),
-        entry.get("year", ""),
-        entry.get("extra info", ""),
-        entry.get("extra info 2", ""),
-        entry.get("Image", "")
-    ]
-    
-    crowd_sheet.append_row(row)
-
-# ---------------------------
-# Command Handlers
-# ---------------------------
-@app.on_message(filters.command("start"))
-def start(client, message):
-    chat_id = message.chat.id
-    reset_state(chat_id)
-    user_state[chat_id]["state"] = STATE_NAME
-    message.reply(
-        "👋 Welcome!\n"
-        "Please enter the name of the location (e.g., 'Taj Mahal').\n"
-        "Type /cancel at any time to abort."
-    )
-
-@app.on_message(filters.command("cancel"))
-def cancel(client, message):
-    chat_id = message.chat.id
-    reset_state(chat_id)
-    message.reply("❌ Operation cancelled. Type /start to begin again.")
-
-@app.on_message(filters.command("help"))
-def help_command(client, message):
-    message.reply(
-        "ℹ️ Commands:\n"
-        "/start - Begin adding a location\n"
-        "/cancel - Abort the current operation\n"
-        "/help - Show this help message"
-    )
-
-@app.on_message(filters.text)
-def handle_text(client, message):
-    text_in = message.text.strip()
-    if text_in.lower() == "/cancel":
-        cancel(client, message)
-        return
-
-    chat_id = message.chat.id
-    if chat_id not in user_state:
-        reset_state(chat_id)
-    state = user_state[chat_id].get("state")
-    
-    if state == STATE_NAME:
-        if not text_in:
-            message.reply("⚠️ Please provide a valid location name.")
-            return
-        user_state[chat_id]["name"] = text_in
-        user_state[chat_id]["state"] = STATE_ADDRESS
-        message.reply("✅ Great! Now enter additional address details (e.g., 'Agra, India') for better geocoding.")
-    
-    elif state == STATE_ADDRESS:
-        if not text_in:
-            message.reply("⚠️ Please enter some address details (e.g., 'Agra, India').")
-            return
-        user_state[chat_id]["address"] = text_in
-        user_state[chat_id]["state"] = STATE_TYPE
-        keyboard = ReplyKeyboardMarkup(
-            [[KeyboardButton(text=opt)] for opt in TYPE_OPTIONS],
-            one_time_keyboard=True,
-            resize_keyboard=True
-        )
-        message.reply("👉 Please choose the type:", reply_markup=keyboard)
-    
-    elif state == STATE_TYPE:
-        if text_in not in TYPE_OPTIONS:
-            message.reply("⚠️ Please choose a valid type from the options provided.")
-            return
-        user_state[chat_id]["type"] = text_in
-        user_state[chat_id]["state"] = STATE_YEAR
-        keyboard = ReplyKeyboardMarkup(
-            [[KeyboardButton(text=opt)] for opt in YEAR_OPTIONS],
-            one_time_keyboard=True,
-            resize_keyboard=True
-        )
-        message.reply("👉 Please choose the year category:", reply_markup=keyboard)
-    
-    elif state == STATE_YEAR:
-        if text_in not in YEAR_OPTIONS:
-            message.reply("⚠️ Please choose a valid year category (either 'test series' or 'PYQ').")
-            return
-        user_state[chat_id]["year"] = text_in
-        user_state[chat_id]["state"] = STATE_EXTRA
-        message.reply("👉 Please provide a one-line extra info (or type /skip to use the default 'other').")
-    
-    elif state == STATE_EXTRA:
-        if text_in.lower() == "/skip":
-            user_state[chat_id]["extra info"] = "other"
-        else:
-            user_state[chat_id]["extra info"] = text_in
-        user_state[chat_id]["state"] = STATE_EXTRA2
-        message.reply("👉 Optionally, enter your Telegram name or pseudonym for extra info 2 (or type /skip to use 'other').")
-    
-    elif state == STATE_EXTRA2:
-        if text_in.lower() == "/skip":
-            user_state[chat_id]["extra info 2"] = "other"
-        else:
-            user_state[chat_id]["extra info 2"] = text_in
-
-        # Proceed with geocoding.
-        name = user_state[chat_id].get("name", "")
-        addr = user_state[chat_id].get("address", "")
-        query = f"{name}, {addr}"
-        url = "https://nominatim.openstreetmap.org/search"
-        params = {"q": query, "format": "json", "limit": 1}
-        headers = {"User-Agent": "YourLocationBot/1.0 (your-email@example.com)"}
-        try:
-            response = requests.get(url, params=params, headers=headers, timeout=10)
-            results = response.json()
-        except Exception as e:
-            message.reply(f"❌ Error during geocoding: {e}")
-            reset_state(chat_id)
-            return
-        
-        if results:
-            latitude = results[0].get("lat", "")
-            longitude = results[0].get("lon", "")
-        else:
-            message.reply("⚠️ Geocoding returned no results. This might be due to an incomplete or ambiguous address. Please check your entry and try again.")
-            reset_state(chat_id)
-            return
-        
-        entry = {
-            "Name": name,
-            "Latitude": latitude,
-            "Longitude": longitude,
-            "type": user_state[chat_id].get("type", ""),
-            "year": user_state[chat_id].get("year", ""),
-            "extra info": user_state[chat_id].get("extra info", ""),
-            "extra info 2": user_state[chat_id].get("extra info 2", ""),
-            "Image": ""
+    /* Popup image styling */
+    .popup-image {
+      max-width: 100px;
+      max-height: 100px;
+      width: auto;
+      height: auto;
+      display: block;
+      margin: 5px 0;
+      border-radius: 4px;
+      object-fit: cover;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>UPSC Mapping by Advaniji</h1>
+    <p>(Based on PYQ and various test series)</p>
+    <!-- Dark Mode Toggle with text and emoji -->
+    <button id="dark-mode-toggle" aria-label="Toggle Dark Mode" tabindex="0">Dark Mode 🌙</button>
+  </header>
+  
+  <div id="map-container">
+    <div id="map"></div>
+    <div id="map-overlay">
+      <label for="filter">Select Category:</label>
+      <!-- Dropdown for filtering markers -->
+      <select id="filter" aria-label="Filter categories" tabindex="0"></select>
+    </div>
+  </div>
+  
+  <div id="submit-box">
+    <button id="contribute" onclick="window.open('https://forms.gle/w6tuHhiKH4URix3u9', '_blank')" aria-label="Submit a Location" tabindex="0">
+      Submit a Location
+    </button>
+    <p>Need coordinates? Use <a href="https://www.latlong.net/convert-address-to-lat-long.html" target="_blank">latlong.net</a></p>
+  </div>
+  
+  <footer>
+    Made with ❤️ by <a href="https://github.com/advaniji" target="_blank">Advaniji</a> &nbsp;|&nbsp; OSM borders provided.
+  </footer>
+  
+  <div id="timer" tabindex="0"></div>
+  <!-- Fallback message for core functionality errors -->
+  <div id="fallback-message" role="alert" tabindex="0"></div>
+  
+  <!-- Leaflet and jQuery Scripts -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  
+  <!-- Optimized JavaScript -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      // Set theme based on localStorage
+      let isDarkMode = localStorage.getItem('theme') === 'dark';
+      if (isDarkMode) {
+        document.body.classList.add('dark-mode');
+      }
+      
+      // Define map tile layers
+      const lightTile = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+      });
+      const darkTile = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors, &copy; CARTO'
+      });
+      
+      // Initialize map (centered roughly over India)
+      const map = L.map('map').setView([22.5, 80], 4);
+      if (isDarkMode) {
+        darkTile.addTo(map);
+        document.getElementById('dark-mode-toggle').innerHTML = 'Light Mode ☀️';
+      } else {
+        lightTile.addTo(map);
+        document.getElementById('dark-mode-toggle').innerHTML = 'Dark Mode 🌙';
+      }
+      
+      // Setup dark mode toggle functionality
+      const darkModeToggle = document.getElementById('dark-mode-toggle');
+      darkModeToggle.addEventListener('click', function() {
+        document.body.classList.toggle('dark-mode');
+        if (document.body.classList.contains('dark-mode')) {
+          localStorage.setItem('theme', 'dark');
+          darkModeToggle.innerHTML = 'Light Mode ☀️';
+          map.removeLayer(lightTile);
+          darkTile.addTo(map);
+        } else {
+          localStorage.setItem('theme', 'light');
+          darkModeToggle.innerHTML = 'Dark Mode 🌙';
+          map.removeLayer(darkTile);
+          lightTile.addTo(map);
         }
-        try:
-            push_to_sheet(entry)
-            message.reply("🙏 Thank you for crowdsourcing and supporting the project!")
-        except Exception as e:
-            message.reply(f"❌ Failed to push data to Google Sheets: {e}\n(Check your credentials and sheet sharing settings.)")
-        reset_state(chat_id)
-    
-    else:
-        message.reply("👉 Please type /start to begin or /cancel to abort.")
-
-# ---------------------------
-# Flask Health Check Setup
-# ---------------------------
-health_app = Flask(__name__)
-
-@health_app.route("/")
-def health_check():
-    return "OK", 200
-
-def run_health_app():
-    port = int(os.environ.get("PORT", 10000))
-    health_app.run(host="0.0.0.0", port=port)
-
-# ---------------------------
-# Main Execution
-# ---------------------------
-if __name__ == "__main__":
-    # Start the Flask health check server in a separate thread.
-    health_thread = Thread(target=run_health_app)
-    health_thread.daemon = True
-    health_thread.start()
-    
-    print("🚀 Health check endpoint is running.")
-    print("🚀 Starting Pyrogram bot...")
-    app.run()
+      });
+      
+      let markers = [];
+      let locations = [];
+      const cacheDuration = 5 * 60 * 60 * 1000; // 5 hours in milliseconds
+      
+      // Fetch data with caching and fallback proxies
+      async function fetchDataWithCaching() {
+        const targetUrl = 'https://opensheet.elk.sh/17BZkd2e71TUyHh2KmHfpjz7XXqRXEbh5OvP9mv6wFHM/sheet1';
+        const cachedData = localStorage.getItem('locationData');
+        const cachedTimestamp = localStorage.getItem('locationDataTimestamp');
+        
+        if (cachedData && cachedTimestamp && (Date.now() - cachedTimestamp) < cacheDuration) {
+          console.log('Using cached data');
+          return JSON.parse(cachedData);
+        }
+        
+        const fetchUrls = [
+          targetUrl,
+          `https://crosbc.advaniji96.workers.dev/?url=${encodeURIComponent(targetUrl)}`,
+          `https://thingproxy.freeboard.io/fetch/${targetUrl}`
+        ];
+        let lastError = null;
+        for (const url of fetchUrls) {
+          try {
+            const response = await fetch(url);
+            if (response.ok) {
+              const data = await response.json();
+              localStorage.setItem('locationData', JSON.stringify(data));
+              localStorage.setItem('locationDataTimestamp', Date.now());
+              console.log(`Data fetched from: ${url}`);
+              return data;
+            } else {
+              console.warn(`Error fetching from ${url}: ${response.statusText}`);
+              lastError = new Error(`Error ${response.status}: ${response.statusText}`);
+            }
+          } catch (error) {
+            console.error(`Fetch error from ${url}:`, error);
+            lastError = error;
+          }
+        }
+        throw lastError;
+      }
+      
+      // Process fetched data and update map markers & filter dropdown
+      function processData(data) {
+        const categories = new Set();
+        let locationsToAdd = [];
+        data.forEach(row => {
+          if (!row.Name) return;
+          const lat = parseFloat(row.Latitude);
+          const lon = parseFloat(row.Longitude);
+          if (!isNaN(lat) && !isNaN(lon)) {
+            const locationData = {
+              name: row.Name,
+              type: row.type || 'Other',
+              year: row.year || 'Unknown',
+              extra: row['extra info'] || 'No additional info',
+              extra2: row['extra info 2'] || 'No second info',
+              image: row['Image'] || '',
+              lat, lon
+            };
+            locationsToAdd.push(locationData);
+            categories.add(locationData.type);
+          } else {
+            console.warn(`Skipping ${row.Name} due to invalid coordinates`);
+          }
+        });
+        locations = locationsToAdd;
+        updateMarkers('all');
+        
+        // Populate the filter dropdown
+        const filterDropdown = document.getElementById('filter');
+        filterDropdown.innerHTML = '';
+        const allOption = document.createElement('option');
+        allOption.value = 'all';
+        allOption.textContent = 'All Categories';
+        filterDropdown.appendChild(allOption);
+        categories.forEach(category => {
+          const option = document.createElement('option');
+          option.value = category;
+          option.textContent = category;
+          filterDropdown.appendChild(option);
+        });
+      }
+      
+      // Update markers based on selected filter
+      function updateMarkers(filter) {
+        markers.forEach(marker => map.removeLayer(marker));
+        markers = [];
+        let bounds = [];
+        locations.forEach(loc => {
+          if ((filter === 'all' || loc.type === filter) && loc.lat && loc.lon) {
+            const imageHTML = (loc.image && loc.image.trim() !== '')
+              ? `<img src="${loc.image}" alt="${loc.name} image" class="popup-image" loading="lazy" onerror="this.onerror=null; this.src='https://via.placeholder.com/100?text=No+Image';">`
+              : '';
+            const popupContent = `<b>${loc.name}</b><br>
+                                  ${imageHTML}
+                                  Type: ${loc.type}<br>
+                                  Year: ${loc.year}<br>
+                                  Info: ${loc.extra}<br>
+                                  Info 2: ${loc.extra2}`;
+            let marker = L.marker([loc.lat, loc.lon]).addTo(map)
+              .bindPopup(popupContent);
+            marker.bindTooltip(loc.name, {
+              permanent: true,
+              direction: 'top',
+              offset: [0, -5],
+              className: 'leaflet-tooltip-custom'
+            });
+            markers.push(marker);
+            bounds.push(marker.getLatLng());
+          }
+        });
+        if (bounds.length > 0) {
+          map.fitBounds(bounds, { padding: [50, 50] });
+        }
+      }
+      
+      // Countdown Timer for Exam Day
+      const examDate = new Date('2025-05-25T00:00:00');
+      function updateTimer() {
+        const now = new Date();
+        const timeRemaining = examDate - now;
+        if (timeRemaining <= 0) {
+          document.getElementById('timer').innerHTML = 'Exam Day!';
+        } else {
+          const days = Math.floor(timeRemaining / (1000 * 60 * 60 * 24));
+          const hours = Math.floor((timeRemaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+          document.getElementById('timer').innerHTML = `Time left for Prelims: ${days}d ${hours}h`;
+        }
+      }
+      setInterval(updateTimer, 1000);
+      
+      // Fetch and process data
+      fetchDataWithCaching()
+        .then(data => {
+          processData(data);
+        })
+        .catch(err => {
+          console.error('Error fetching data:', err);
+          const fallbackMessage = document.getElementById('fallback-message');
+          fallbackMessage.innerHTML = 'Advaniji is busy organizing next Rath Yatra, please try later 🐎';
+          fallbackMessage.style.display = 'block';
+        });
+      
+      // Update markers on filter change
+      document.getElementById('filter').addEventListener('change', function() {
+        updateMarkers(this.value);
+      });
+    });
+  </script>
+</body>
+</html>
