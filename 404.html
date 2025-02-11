@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 - Page Not Found</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #1a1a1a;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            position: relative;
+        }
+        .container {
+            position: relative;
+            z-index: 2;
+        }
+        h1 {
+            font-size: 2.5rem;
+        }
+        p {
+            font-size: 1.2rem;
+            margin: 10px 0;
+        }
+        .bg-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0.3;
+            z-index: 1;
+        }
+        .btn {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 10px 20px;
+            background-color: #ff9800;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 1.1rem;
+        }
+    </style>
+</head>
+<body>
+    <script>
+        const images = [
+            "https://www.prabhatkhabar.com/wp-content/uploads/2024/11/Lal-Krishna-Advani-Birthday-300x200.jpg",
+            "https://www.prabhatkhabar.com/wp-content/uploads/2024/11/Lal-Krishna-Advani-AND-PM-MODI-1024x683.jpg",
+            "https://ichef.bbci.co.uk/ace/standard/976/cpsprodpb/78DB/production/_114693903_gettyimages-470804924.jpg",
+            "https://organiser.org/wp-content/uploads/2020/11/2_05_39_55_a_1-750x394.jpg"
+        ];
+        const randomImage = images[Math.floor(Math.random() * images.length)];
+        document.write(`<img src="${randomImage}" class="bg-image" alt="404 Image">`);
+    </script>
+    <div class="container">
+        <h1>404 - Page Not Found</h1>
+        <p>Advaniji is busy organizing Rath Yatra 2.0, please try later! 🚩</p>
+        <a href="/" class="btn">Go Home</a>
+    </div>
+</body>
+</html>
