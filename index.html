@@ -151,9 +151,10 @@
       color: var(--text-color);
     }
     
+    /* Reduced padding and font-size for select box */
     #map-overlay select {
-      padding: 6px 10px;
-      font-size: 1em;
+      padding: 4px 8px;
+      font-size: 0.9em;
       border: 1px solid var(--primary-color);
       border-radius: 4px;
       background: var(--card-bg);
@@ -170,12 +171,12 @@
       background: #4a4a4a;
     }
     
-    /* Submit Location Box */
+    /* Submit Location Box with added context and improved styling */
     #submit-box {
       width: 90%;
       max-width: 1000px;
       margin: 20px auto;
-      padding: 15px;
+      padding: 20px;
       background: var(--card-bg);
       border-top: 2px solid #ddd;
       text-align: center;
@@ -186,6 +187,12 @@
     
     body.dark-mode #submit-box {
       border-top: 2px solid #444;
+    }
+    
+    #submit-box p {
+      margin: 0 0 10px;
+      font-size: 1em;
+      font-weight: 500;
     }
     
     #submit-box button {
@@ -281,6 +288,8 @@
       display: none;
     }
 
+    /* Marker custom icon styles are defined inline via JavaScript */
+    
     /* Popup image styling */
     .popup-image {
       max-width: 100px;
@@ -312,6 +321,7 @@
   </div>
   
   <div id="submit-box">
+    <p>Have a new location to share?</p>
     <button id="contribute" onclick="window.open('http://t.me/Upscmappingadvanijibot', '_blank')" aria-label="Submit a Location" tabindex="0">
       Submit a Location
     </button>
@@ -372,11 +382,28 @@
           map.removeLayer(darkTile);
           lightTile.addTo(map);
         }
+        // Refresh markers to update border color if needed.
+        updateMarkers(document.getElementById('filter').value);
       });
       
       let markers = [];
       let locations = [];
       const cacheDuration = 5 * 60 * 60 * 1000; // 5 hours in milliseconds
+      
+      // Object to store colors for each category
+      const categoryColors = {};
+      
+      // Returns a slightly shifted HSL color based on the category.
+      function getCategoryColor(category) {
+        if (!categoryColors[category]) {
+          const baseHue = 100; // starting hue value
+          const increment = 10; // hue difference between categories
+          const count = Object.keys(categoryColors).length;
+          const hue = (baseHue + (count * increment)) % 360;
+          categoryColors[category] = `hsl(${hue}, 70%, 50%)`;
+        }
+        return categoryColors[category];
+      }
       
       // Fetch data with caching and fallback proxies
       async function fetchDataWithCaching() {
@@ -465,6 +492,18 @@
         let bounds = [];
         locations.forEach(loc => {
           if ((filter === 'all' || loc.type === filter) && loc.lat && loc.lon) {
+            // Determine color based on category
+            const color = getCategoryColor(loc.type);
+            const borderColor = document.body.classList.contains('dark-mode') ? '#ddd' : '#333';
+            
+            // Create a custom circular icon using L.divIcon
+            const icon = L.divIcon({
+              html: `<div style="background:${color}; width:16px; height:16px; border:2px solid ${borderColor}; border-radius:50%;"></div>`,
+              iconSize: [16,16],
+              iconAnchor: [8,8],
+              className: ''
+            });
+            
             const imageHTML = (loc.image && loc.image.trim() !== '')
               ? `<img src="${loc.image}" alt="${loc.name} image" class="popup-image" loading="lazy" onerror="this.onerror=null; this.src='https://via.placeholder.com/100?text=No+Image';">`
               : '';
@@ -474,7 +513,8 @@
                                   Year: ${loc.year}<br>
                                   Info: ${loc.extra}<br>
                                   Info 2: ${loc.extra2}`;
-            let marker = L.marker([loc.lat, loc.lon]).addTo(map)
+                                  
+            let marker = L.marker([loc.lat, loc.lon], { icon: icon }).addTo(map)
               .bindPopup(popupContent);
             marker.bindTooltip(loc.name, {
               permanent: true,
