@@ -39,13 +39,13 @@
       --primary-color: #81c784;
       --secondary-color: #66bb6a;
       --accent-color: #ffb74d;
-      --background-color: #2e2e2e;
-      --header-bg: linear-gradient(135deg, #2c3e50, #34495e);
-      --footer-bg: #222;
-      --text-color: #ddd;
-      --tooltip-bg: rgba(40, 40, 40, 0.9);
-      --card-bg: #3a3a3a;
-      --overlay-bg: rgba(60,60,60,0.85);
+      --background-color: #121212;
+      --header-bg: linear-gradient(135deg, #333, #444);
+      --footer-bg: #1a1a1a;
+      --text-color: #e0e0e0;
+      --tooltip-bg: rgba(50, 50, 50, 0.9);
+      --card-bg: #1e1e1e;
+      --overlay-bg: rgba(50,50,50,0.85);
     }
     
     /* Global Styles */
@@ -64,14 +64,10 @@
     header {
       background: var(--header-bg);
       color: #fff;
-      padding: 10px;
+      padding: 20px 10px 10px;
       text-align: center;
       box-shadow: 0 2px 4px rgba(0,0,0,0.2);
       position: relative;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      flex-direction: column;
       transition: background 0.3s;
     }
     
@@ -81,7 +77,7 @@
     }
     
     header p {
-      margin: 5px 0 0;
+      margin: 5px 0 10px;
       font-style: italic;
       opacity: 0.9;
     }
@@ -99,10 +95,22 @@
       font-size: 1em;
       cursor: pointer;
       transition: background 0.3s, transform 0.3s;
+      z-index: 1100;
     }
     
     #dark-mode-toggle:hover {
       transform: scale(1.05);
+    }
+    
+    /* On small screens, position the toggle below the header text */
+    @media (max-width: 480px) {
+      #dark-mode-toggle {
+        position: relative;
+        top: auto;
+        right: auto;
+        margin: 10px auto 0;
+        display: block;
+      }
     }
     
     /* Map Container */
@@ -173,6 +181,11 @@
       text-align: center;
       border-radius: 0 0 10px 10px;
       box-shadow: 0 -2px 4px rgba(0,0,0,0.1);
+      transition: border-color 0.3s;
+    }
+    
+    body.dark-mode #submit-box {
+      border-top: 2px solid #444;
     }
     
     #submit-box button {
@@ -191,18 +204,6 @@
       transform: scale(1.05);
     }
     
-    #submit-box p {
-      margin: 10px 0 0;
-      font-size: 0.9em;
-      color: #777;
-    }
-    
-    #submit-box a {
-      color: var(--primary-color);
-      text-decoration: none;
-      font-weight: 500;
-    }
-    
     /* Footer */
     footer {
       background: var(--footer-bg);
@@ -217,6 +218,12 @@
     footer a {
       color: var(--primary-color);
       text-decoration: none;
+    }
+    
+    .disclaimer {
+      font-size: 0.6em;
+      opacity: 0.6;
+      margin-top: 10px;
     }
     
     /* Countdown Timer */
@@ -291,7 +298,7 @@
   <header>
     <h1>UPSC Mapping by Advaniji</h1>
     <p>(Based on PYQ and various test series)</p>
-    <!-- Dark Mode Toggle with text and emoji -->
+    <!-- Dark Mode Toggle -->
     <button id="dark-mode-toggle" aria-label="Toggle Dark Mode" tabindex="0">Dark Mode 🌙</button>
   </header>
   
@@ -305,14 +312,14 @@
   </div>
   
   <div id="submit-box">
-    <button id="contribute" onclick="window.open('https://forms.gle/w6tuHhiKH4URix3u9', '_blank')" aria-label="Submit a Location" tabindex="0">
+    <button id="contribute" onclick="window.open('http://t.me/Upscmappingadvanijibot', '_blank')" aria-label="Submit a Location" tabindex="0">
       Submit a Location
     </button>
-    <p>Need coordinates? Use <a href="https://www.latlong.net/convert-address-to-lat-long.html" target="_blank">latlong.net</a></p>
   </div>
   
   <footer>
     Made with ❤️ by <a href="https://github.com/advaniji" target="_blank">Advaniji</a> &nbsp;|&nbsp; OSM borders provided.
+    <div class="disclaimer">Please refer official sources, this website is for reference only.</div>
   </footer>
   
   <div id="timer" tabindex="0"></div>
