@@ -30,8 +30,8 @@
       --footer-bg: #ffffff;
       --text-color: #333;
       --tooltip-bg: rgba(255, 255, 255, 0.9);
-      --card-bg: #ffffff;          /* Used for containers and cards */
-      --overlay-bg: rgba(255,255,255,0.85); /* Used for the map overlay */
+      --card-bg: #ffffff;
+      --overlay-bg: rgba(255,255,255,0.85);
     }
     
     /* Dark Mode Variables */
@@ -102,7 +102,6 @@
       transform: scale(1.05);
     }
     
-    /* On small screens, position the toggle below the header text */
     @media (max-width: 480px) {
       #dark-mode-toggle {
         position: relative;
@@ -151,7 +150,7 @@
       color: var(--text-color);
     }
     
-    /* Reduced padding and font-size for select box */
+    /* Smaller select box */
     #map-overlay select {
       padding: 4px 8px;
       font-size: 0.9em;
@@ -287,8 +286,6 @@
       z-index: 3000;
       display: none;
     }
-
-    /* Marker custom icon styles are defined inline via JavaScript */
     
     /* Popup image styling */
     .popup-image {
@@ -315,7 +312,6 @@
     <div id="map"></div>
     <div id="map-overlay">
       <label for="filter">Select Category:</label>
-      <!-- Dropdown for filtering markers -->
       <select id="filter" aria-label="Filter categories" tabindex="0"></select>
     </div>
   </div>
@@ -333,14 +329,12 @@
   </footer>
   
   <div id="timer" tabindex="0"></div>
-  <!-- Fallback message for core functionality errors -->
   <div id="fallback-message" role="alert" tabindex="0"></div>
   
   <!-- Leaflet and jQuery Scripts -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   
-  <!-- Optimized JavaScript -->
   <script>
     document.addEventListener('DOMContentLoaded', function () {
       // Set theme based on localStorage
@@ -367,7 +361,7 @@
         document.getElementById('dark-mode-toggle').innerHTML = 'Dark Mode 🌙';
       }
       
-      // Setup dark mode toggle functionality
+      // Dark mode toggle functionality
       const darkModeToggle = document.getElementById('dark-mode-toggle');
       darkModeToggle.addEventListener('click', function() {
         document.body.classList.toggle('dark-mode');
@@ -382,30 +376,26 @@
           map.removeLayer(darkTile);
           lightTile.addTo(map);
         }
-        // Refresh markers to update border color if needed.
+        // Refresh markers to update icon style if needed.
         updateMarkers(document.getElementById('filter').value);
       });
       
       let markers = [];
       let locations = [];
-      const cacheDuration = 5 * 60 * 60 * 1000; // 5 hours in milliseconds
+      const cacheDuration = 5 * 60 * 60 * 1000; // 5 hours
       
-      // Object to store colors for each category
-      const categoryColors = {};
-      
-      // Returns a slightly shifted HSL color based on the category.
-      function getCategoryColor(category) {
-        if (!categoryColors[category]) {
-          const baseHue = 100; // starting hue value
-          const increment = 10; // hue difference between categories
-          const count = Object.keys(categoryColors).length;
-          const hue = (baseHue + (count * increment)) % 360;
-          categoryColors[category] = `hsl(${hue}, 70%, 50%)`;
+      // For subtle hue adjustments (range: -5° to +5°)
+      const subtleHueArray = [0, 3, -3, 5, -5];
+      const categoryHues = {};
+      function getCategoryHue(category) {
+        if (!(category in categoryHues)) {
+          const index = Object.keys(categoryHues).length % subtleHueArray.length;
+          categoryHues[category] = subtleHueArray[index];
         }
-        return categoryColors[category];
+        return categoryHues[category];
       }
       
-      // Fetch data with caching and fallback proxies
+      // Fetch data with caching
       async function fetchDataWithCaching() {
         const targetUrl = 'https://opensheet.elk.sh/17BZkd2e71TUyHh2KmHfpjz7XXqRXEbh5OvP9mv6wFHM/sheet1';
         const cachedData = localStorage.getItem('locationData');
@@ -443,10 +433,10 @@
         throw lastError;
       }
       
-      // Process fetched data and update map markers & filter dropdown
+      // Process data and update markers/dropdown
       function processData(data) {
         const categories = new Set();
-        let locationsToAdd = [];
+        const locationsToAdd = [];
         data.forEach(row => {
           if (!row.Name) return;
           const lat = parseFloat(row.Latitude);
@@ -468,7 +458,6 @@
           }
         });
         locations = locationsToAdd;
-        updateMarkers('all');
         
         // Populate the filter dropdown
         const filterDropdown = document.getElementById('filter');
@@ -483,24 +472,31 @@
           option.textContent = category;
           filterDropdown.appendChild(option);
         });
+        
+        // Choose a random category (if available) as default; else use "all"
+        const categoriesArray = Array.from(categories);
+        let defaultFilter = 'all';
+        if (categoriesArray.length > 0) {
+          defaultFilter = categoriesArray[Math.floor(Math.random() * categoriesArray.length)];
+          filterDropdown.value = defaultFilter;
+        }
+        updateMarkers(defaultFilter);
       }
       
       // Update markers based on selected filter
       function updateMarkers(filter) {
         markers.forEach(marker => map.removeLayer(marker));
         markers = [];
-        let bounds = [];
+        const bounds = [];
         locations.forEach(loc => {
           if ((filter === 'all' || loc.type === filter) && loc.lat && loc.lon) {
-            // Determine color based on category
-            const color = getCategoryColor(loc.type);
-            const borderColor = document.body.classList.contains('dark-mode') ? '#ddd' : '#333';
-            
-            // Create a custom circular icon using L.divIcon
+            // Use default marker icon with a subtle hue rotation based on category
+            const hueRotation = getCategoryHue(loc.type);
+            const iconHtml = `<img src="https://unpkg.com/leaflet/dist/images/marker-icon.png" style="filter: hue-rotate(${hueRotation}deg);" />`;
             const icon = L.divIcon({
-              html: `<div style="background:${color}; width:16px; height:16px; border:2px solid ${borderColor}; border-radius:50%;"></div>`,
-              iconSize: [16,16],
-              iconAnchor: [8,8],
+              html: iconHtml,
+              iconSize: [25, 41],
+              iconAnchor: [12, 41],
               className: ''
             });
             
@@ -513,7 +509,6 @@
                                   Year: ${loc.year}<br>
                                   Info: ${loc.extra}<br>
                                   Info 2: ${loc.extra2}`;
-                                  
             let marker = L.marker([loc.lat, loc.lon], { icon: icon }).addTo(map)
               .bindPopup(popupContent);
             marker.bindTooltip(loc.name, {
@@ -548,9 +543,7 @@
       
       // Fetch and process data
       fetchDataWithCaching()
-        .then(data => {
-          processData(data);
-        })
+        .then(data => processData(data))
         .catch(err => {
           console.error('Error fetching data:', err);
           const fallbackMessage = document.getElementById('fallback-message');
@@ -558,7 +551,7 @@
           fallbackMessage.style.display = 'block';
         });
       
-      // Update markers on filter change
+      // Update markers when filter changes
       document.getElementById('filter').addEventListener('change', function() {
         updateMarkers(this.value);
       });
