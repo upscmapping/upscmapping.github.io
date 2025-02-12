@@ -30,6 +30,8 @@
       --footer-bg: #ffffff;
       --text-color: #333;
       --tooltip-bg: rgba(255, 255, 255, 0.9);
+      --card-bg: #ffffff;          /* Used for containers and cards */
+      --overlay-bg: rgba(255,255,255,0.85); /* Used for the map overlay */
     }
     
     /* Dark Mode Variables */
@@ -37,11 +39,13 @@
       --primary-color: #81c784;
       --secondary-color: #66bb6a;
       --accent-color: #ffb74d;
-      --background-color: #333;
-      --header-bg: linear-gradient(135deg, #555, #222);
-      --footer-bg: #424242;
-      --text-color: #eee;
-      --tooltip-bg: rgba(50, 50, 50, 0.9);
+      --background-color: #2e2e2e;
+      --header-bg: linear-gradient(135deg, #2c3e50, #34495e);
+      --footer-bg: #222;
+      --text-color: #ddd;
+      --tooltip-bg: rgba(40, 40, 40, 0.9);
+      --card-bg: #3a3a3a;
+      --overlay-bg: rgba(60,60,60,0.85);
     }
     
     /* Global Styles */
@@ -87,10 +91,18 @@
       position: absolute;
       top: 10px;
       right: 10px;
-      background: transparent;
+      background-color: var(--primary-color);
+      color: #fff;
       border: none;
-      font-size: 1.2em;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 1em;
       cursor: pointer;
+      transition: background 0.3s, transform 0.3s;
+    }
+    
+    #dark-mode-toggle:hover {
+      transform: scale(1.05);
     }
     
     /* Map Container */
@@ -99,7 +111,7 @@
       width: 90%;
       max-width: 1000px;
       margin: 20px auto;
-      background: #fff;
+      background: var(--card-bg);
       border-radius: 10px;
       box-shadow: 0 4px 15px rgba(0,0,0,0.1);
       overflow: hidden;
@@ -115,7 +127,7 @@
       position: absolute;
       top: 15px;
       left: 15px;
-      background: rgba(255,255,255,0.85);
+      background: var(--overlay-bg);
       padding: 8px 12px;
       border-radius: 8px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.2);
@@ -136,13 +148,18 @@
       font-size: 1em;
       border: 1px solid var(--primary-color);
       border-radius: 4px;
-      background: #f9f9f9;
+      background: var(--card-bg);
       transition: background 0.3s;
       outline: none;
+      color: var(--text-color);
     }
     
     #map-overlay select:hover {
       background: #e8f5e9;
+    }
+    
+    body.dark-mode #map-overlay select:hover {
+      background: #4a4a4a;
     }
     
     /* Submit Location Box */
@@ -151,7 +168,7 @@
       max-width: 1000px;
       margin: 20px auto;
       padding: 15px;
-      background: #fff;
+      background: var(--card-bg);
       border-top: 2px solid #ddd;
       text-align: center;
       border-radius: 0 0 10px 10px;
