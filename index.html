@@ -1,20 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>UPSC Mapping</title>
-  <meta name="description" content="UPSC Mapping provides geographical insights based on PYQ and various test series.">
-  <meta name="author" content="Advaniji">
+  <meta name="description" content="UPSC Mapping provides geographical insights based on PYQ and various test series." />
+  <meta name="author" content="Advaniji" />
   <!-- Open Graph Meta Tags -->
-  <meta property="og:title" content="UPSC Mapping by Advaniji">
-  <meta property="og:description" content="Geographical insights based on PYQ and various test series.">
-  <meta property="og:image" content="advani.png">
-  <meta property="og:type" content="website">
-  <link rel="icon" href="advani.png" type="image/png">
+  <meta property="og:title" content="UPSC Mapping by Advaniji" />
+  <meta property="og:description" content="Geographical insights based on PYQ and various test series." />
+  <meta property="og:image" content="advani.png" />
+  <meta property="og:type" content="website" />
+  <link rel="icon" href="advani.png" type="image/png" />
   
   <!-- Google Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
   
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
@@ -31,7 +31,8 @@
       --text-color: #333;
       --tooltip-bg: rgba(255, 255, 255, 0.9);
       --card-bg: #ffffff;
-      --overlay-bg: rgba(255,255,255,0.85);
+      --overlay-bg: rgba(255, 255, 255, 0.85);
+      --timer-bg: #4CAF50;
     }
     
     /* Dark Mode Variables */
@@ -46,6 +47,7 @@
       --tooltip-bg: rgba(50, 50, 50, 0.9);
       --card-bg: #1e1e1e;
       --overlay-bg: rgba(50,50,50,0.85);
+      --timer-bg: #81c784;
     }
     
     /* Global Styles */
@@ -74,6 +76,8 @@
     header h1 {
       margin: 0;
       font-size: 2em;
+      /* Ensuring the title appears at the very top */
+      padding-top: 10px;
     }
     
     header p {
@@ -163,14 +167,14 @@
     }
     
     #map-overlay select:hover {
-      background: #e8f5e9;
+      background: var(--accent-color);
     }
     
     body.dark-mode #map-overlay select:hover {
       background: #4a4a4a;
     }
     
-    /* Submit Location Box with added context and improved styling */
+    /* Submit Location Box with improved styling */
     #submit-box {
       width: 90%;
       max-width: 1000px;
@@ -239,12 +243,12 @@
       right: 20px;
       z-index: 2000;
       font-size: 0.9em;
-      background: rgba(0, 0, 0, 0.4);
+      background: var(--timer-bg);
       color: #fff;
       padding: 8px 12px;
       border-radius: 6px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-      opacity: 0.8;
+      opacity: 0.9;
       cursor: pointer;
       transition: opacity 0.3s, transform 0.3s;
     }
@@ -277,7 +281,7 @@
       top: 20%;
       left: 50%;
       transform: translateX(-50%);
-      background: #ffeb3b;
+      background: var(--accent-color);
       color: #333;
       padding: 20px;
       border-radius: 8px;
@@ -325,7 +329,7 @@
   
   <footer>
     Made with ❤️ by <a href="https://github.com/advaniji" target="_blank">Advaniji</a> &nbsp;|&nbsp; OSM borders provided.
-    <div class="disclaimer">Please refer official sources, this website is for reference only.</div>
+    <div class="disclaimer">Please refer to official sources; this website is for reference only.</div>
   </footer>
   
   <div id="timer" tabindex="0"></div>
@@ -384,13 +388,13 @@
       let locations = [];
       const cacheDuration = 5 * 60 * 60 * 1000; // 5 hours
       
-      // For subtle hue adjustments (range: -5° to +5°)
-      const subtleHueArray = [0, 3, -3, 5, -5];
+      // Use a wider range of hue rotations for more visible color differences.
+      const hueArray = [0, 60, 120, 180, 240, 300];
       const categoryHues = {};
       function getCategoryHue(category) {
         if (!(category in categoryHues)) {
-          const index = Object.keys(categoryHues).length % subtleHueArray.length;
-          categoryHues[category] = subtleHueArray[index];
+          const index = Object.keys(categoryHues).length % hueArray.length;
+          categoryHues[category] = hueArray[index];
         }
         return categoryHues[category];
       }
@@ -490,7 +494,7 @@
         const bounds = [];
         locations.forEach(loc => {
           if ((filter === 'all' || loc.type === filter) && loc.lat && loc.lon) {
-            // Use default marker icon with a subtle hue rotation based on category
+            // Apply a more pronounced hue rotation based on category
             const hueRotation = getCategoryHue(loc.type);
             const iconHtml = `<img src="https://unpkg.com/leaflet/dist/images/marker-icon.png" style="filter: hue-rotate(${hueRotation}deg);" />`;
             const icon = L.divIcon({
@@ -511,10 +515,11 @@
                                   Info 2: ${loc.extra2}`;
             let marker = L.marker([loc.lat, loc.lon], { icon: icon }).addTo(map)
               .bindPopup(popupContent);
+            // Adjusted tooltip offset so that the location name appears clearly above the marker.
             marker.bindTooltip(loc.name, {
               permanent: true,
               direction: 'top',
-              offset: [0, -5],
+              offset: [0, -30],
               className: 'leaflet-tooltip-custom'
             });
             markers.push(marker);
@@ -547,7 +552,7 @@
         .catch(err => {
           console.error('Error fetching data:', err);
           const fallbackMessage = document.getElementById('fallback-message');
-          fallbackMessage.innerHTML = 'Advaniji is busy organizing next Rath Yatra, please try later 🐎';
+          fallbackMessage.innerHTML = 'Advaniji is busy organizing the next Rath Yatra, please try later 🐎';
           fallbackMessage.style.display = 'block';
         });
       
