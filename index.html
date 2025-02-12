@@ -25,14 +25,17 @@
       --primary-color: #4CAF50;
       --secondary-color: #2E7D32;
       --accent-color: #FFC107;
-      --background-color: #f1f1f1;
+      --background-color: #f9f9f9;
       --header-bg: linear-gradient(135deg, #4CAF50, #66BB6A);
       --footer-bg: #ffffff;
       --text-color: #333;
       --tooltip-bg: rgba(255, 255, 255, 0.9);
       --card-bg: #ffffff;
       --overlay-bg: rgba(255, 255, 255, 0.85);
-      --timer-bg: #4CAF50;
+      /* Neutral dark–gray timer background */
+      --timer-bg: rgba(100, 100, 100, 0.7);
+      --border-color: #e0e0e0;
+      --transition-speed: 0.3s;
     }
     
     /* Dark Mode Variables */
@@ -47,7 +50,9 @@
       --tooltip-bg: rgba(50, 50, 50, 0.9);
       --card-bg: #1e1e1e;
       --overlay-bg: rgba(50,50,50,0.85);
-      --timer-bg: #81c784;
+      /* Even darker neutral background for timer */
+      --timer-bg: rgba(50, 50, 50, 0.7);
+      --border-color: #444;
     }
     
     /* Global Styles */
@@ -60,7 +65,7 @@
       display: flex;
       flex-direction: column;
       min-height: 100vh;
-      transition: background 0.3s, color 0.3s;
+      transition: background var(--transition-speed), color var(--transition-speed);
     }
     
     header {
@@ -70,13 +75,12 @@
       text-align: center;
       box-shadow: 0 2px 4px rgba(0,0,0,0.2);
       position: relative;
-      transition: background 0.3s;
+      transition: background var(--transition-speed);
     }
     
     header h1 {
       margin: 0;
       font-size: 2em;
-      /* Ensuring the title appears at the very top */
       padding-top: 10px;
     }
     
@@ -89,21 +93,22 @@
     /* Dark mode toggle button in header */
     #dark-mode-toggle {
       position: absolute;
-      top: 10px;
-      right: 10px;
+      top: 15px;
+      right: 15px;
       background-color: var(--primary-color);
       color: #fff;
       border: none;
-      padding: 8px 12px;
+      padding: 8px 16px;
       border-radius: 4px;
-      font-size: 1em;
+      font-size: 0.9em;
       cursor: pointer;
-      transition: background 0.3s, transform 0.3s;
+      transition: background var(--transition-speed), transform var(--transition-speed);
       z-index: 1100;
     }
     
     #dark-mode-toggle:hover {
-      transform: scale(1.05);
+      transform: scale(1.03);
+      background-color: var(--secondary-color);
     }
     
     @media (max-width: 480px) {
@@ -126,6 +131,7 @@
       border-radius: 10px;
       box-shadow: 0 4px 15px rgba(0,0,0,0.1);
       overflow: hidden;
+      border: 1px solid var(--border-color);
     }
     
     #map {
@@ -154,42 +160,39 @@
       color: var(--text-color);
     }
     
-    /* Smaller select box */
+    /* Dropdown styling */
     #map-overlay select {
       padding: 4px 8px;
       font-size: 0.9em;
       border: 1px solid var(--primary-color);
       border-radius: 4px;
       background: var(--card-bg);
-      transition: background 0.3s;
+      transition: background var(--transition-speed);
       outline: none;
       color: var(--text-color);
     }
     
     #map-overlay select:hover {
       background: var(--accent-color);
+      color: #fff;
     }
     
     body.dark-mode #map-overlay select:hover {
-      background: #4a4a4a;
+      background: #555;
     }
     
-    /* Submit Location Box with improved styling */
+    /* Submit Location Box */
     #submit-box {
       width: 90%;
       max-width: 1000px;
       margin: 20px auto;
       padding: 20px;
       background: var(--card-bg);
-      border-top: 2px solid #ddd;
+      border-top: 2px solid var(--border-color);
       text-align: center;
       border-radius: 0 0 10px 10px;
       box-shadow: 0 -2px 4px rgba(0,0,0,0.1);
-      transition: border-color 0.3s;
-    }
-    
-    body.dark-mode #submit-box {
-      border-top: 2px solid #444;
+      transition: border-color var(--transition-speed);
     }
     
     #submit-box p {
@@ -206,12 +209,12 @@
       background: var(--primary-color);
       color: #fff;
       cursor: pointer;
-      transition: background 0.3s, transform 0.3s;
+      transition: background var(--transition-speed), transform var(--transition-speed);
     }
     
     #submit-box button:hover {
       background: var(--secondary-color);
-      transform: scale(1.05);
+      transform: scale(1.03);
     }
     
     /* Footer */
@@ -221,7 +224,7 @@
       padding: 15px 10px;
       font-size: 0.9em;
       color: #777;
-      border-top: 1px solid #ddd;
+      border-top: 1px solid var(--border-color);
       margin-top: auto;
     }
     
@@ -248,14 +251,13 @@
       padding: 8px 12px;
       border-radius: 6px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-      opacity: 0.9;
       cursor: pointer;
-      transition: opacity 0.3s, transform 0.3s;
+      transition: background var(--transition-speed), transform var(--transition-speed);
+      backdrop-filter: blur(4px);
     }
     
     #timer:hover {
-      opacity: 1;
-      transform: scale(1.05);
+      transform: scale(1.03);
     }
     
     /* Custom Tooltip Styling for Markers */
@@ -289,6 +291,7 @@
       font-size: 1.2em;
       z-index: 3000;
       display: none;
+      transition: opacity var(--transition-speed);
     }
     
     /* Popup image styling */
@@ -309,7 +312,7 @@
     <h1>UPSC Mapping by Advaniji</h1>
     <p>(Based on PYQ and various test series)</p>
     <!-- Dark Mode Toggle -->
-    <button id="dark-mode-toggle" aria-label="Toggle Dark Mode" tabindex="0">Dark Mode 🌙</button>
+    <button id="dark-mode-toggle" aria-label="Toggle Dark Mode" tabindex="0">Dark Mode</button>
   </header>
   
   <div id="map-container">
@@ -359,10 +362,10 @@
       const map = L.map('map').setView([22.5, 80], 4);
       if (isDarkMode) {
         darkTile.addTo(map);
-        document.getElementById('dark-mode-toggle').innerHTML = 'Light Mode ☀️';
+        document.getElementById('dark-mode-toggle').innerHTML = 'Light Mode';
       } else {
         lightTile.addTo(map);
-        document.getElementById('dark-mode-toggle').innerHTML = 'Dark Mode 🌙';
+        document.getElementById('dark-mode-toggle').innerHTML = 'Dark Mode';
       }
       
       // Dark mode toggle functionality
@@ -371,12 +374,12 @@
         document.body.classList.toggle('dark-mode');
         if (document.body.classList.contains('dark-mode')) {
           localStorage.setItem('theme', 'dark');
-          darkModeToggle.innerHTML = 'Light Mode ☀️';
+          darkModeToggle.innerHTML = 'Light Mode';
           map.removeLayer(lightTile);
           darkTile.addTo(map);
         } else {
           localStorage.setItem('theme', 'light');
-          darkModeToggle.innerHTML = 'Dark Mode 🌙';
+          darkModeToggle.innerHTML = 'Dark Mode';
           map.removeLayer(darkTile);
           lightTile.addTo(map);
         }
@@ -388,15 +391,25 @@
       let locations = [];
       const cacheDuration = 5 * 60 * 60 * 1000; // 5 hours
       
-      // Use a wider range of hue rotations for more visible color differences.
-      const hueArray = [0, 60, 120, 180, 240, 300];
-      const categoryHues = {};
-      function getCategoryHue(category) {
-        if (!(category in categoryHues)) {
-          const index = Object.keys(categoryHues).length % hueArray.length;
-          categoryHues[category] = hueArray[index];
-        }
-        return categoryHues[category];
+      /* --- Marker Color Filters for Mild Variations ---
+         Each category will be assigned one of these CSS filter strings.
+         These filters slightly adjust the default (blue) marker.
+      */
+      const markerFilters = [
+         'hue-rotate(0deg) brightness(1.1) saturate(0.9)',
+         'hue-rotate(15deg) brightness(1.1) saturate(0.9)',
+         'hue-rotate(30deg) brightness(1.1) saturate(0.9)',
+         'hue-rotate(45deg) brightness(1.1) saturate(0.9)',
+         'hue-rotate(60deg) brightness(1.1) saturate(0.9)',
+         'hue-rotate(75deg) brightness(1.1) saturate(0.9)'
+      ];
+      const categoryFilters = {};
+      function getCategoryFilter(category) {
+          if (!(category in categoryFilters)) {
+              const index = Object.keys(categoryFilters).length % markerFilters.length;
+              categoryFilters[category] = markerFilters[index];
+          }
+          return categoryFilters[category];
       }
       
       // Fetch data with caching
@@ -487,20 +500,37 @@
         updateMarkers(defaultFilter);
       }
       
-      // Update markers based on selected filter
+      // Update markers based on selected filter,
+      // and reduce marker size if there are more than 10 entries in that category.
       function updateMarkers(filter) {
+        // Remove previous markers
         markers.forEach(marker => map.removeLayer(marker));
         markers = [];
         const bounds = [];
+        // First, count the number of markers per category in the filtered set.
+        const categoryCounts = {};
         locations.forEach(loc => {
           if ((filter === 'all' || loc.type === filter) && loc.lat && loc.lon) {
-            // Apply a more pronounced hue rotation based on category
-            const hueRotation = getCategoryHue(loc.type);
-            const iconHtml = `<img src="https://unpkg.com/leaflet/dist/images/marker-icon.png" style="filter: hue-rotate(${hueRotation}deg);" />`;
+            categoryCounts[loc.type] = (categoryCounts[loc.type] || 0) + 1;
+          }
+        });
+        
+        // Then, add markers with an adjusted icon size if needed.
+        locations.forEach(loc => {
+          if ((filter === 'all' || loc.type === filter) && loc.lat && loc.lon) {
+            const count = categoryCounts[loc.type] || 0;
+            let iconSize = [25, 41];
+            let iconAnchor = [12, 41];
+            if (count > 10) {
+              iconSize = [20, 33];
+              iconAnchor = [10, 33];
+            }
+            const filterStyle = getCategoryFilter(loc.type);
+            const iconHtml = `<img src="https://unpkg.com/leaflet/dist/images/marker-icon.png" style="filter: ${filterStyle};" />`;
             const icon = L.divIcon({
               html: iconHtml,
-              iconSize: [25, 41],
-              iconAnchor: [12, 41],
+              iconSize: iconSize,
+              iconAnchor: iconAnchor,
               className: ''
             });
             
@@ -515,11 +545,10 @@
                                   Info 2: ${loc.extra2}`;
             let marker = L.marker([loc.lat, loc.lon], { icon: icon }).addTo(map)
               .bindPopup(popupContent);
-            // Adjusted tooltip offset so that the location name appears clearly above the marker.
             marker.bindTooltip(loc.name, {
               permanent: true,
               direction: 'top',
-              offset: [0, -30],
+              offset: [0, -iconSize[1]],
               className: 'leaflet-tooltip-custom'
             });
             markers.push(marker);
@@ -552,7 +581,7 @@
         .catch(err => {
           console.error('Error fetching data:', err);
           const fallbackMessage = document.getElementById('fallback-message');
-          fallbackMessage.innerHTML = 'Advaniji is busy organizing the next Rath Yatra, please try later 🐎';
+          fallbackMessage.innerHTML = 'Advaniji is busy organizing the next Rath Yatra, please try later.';
           fallbackMessage.style.display = 'block';
         });
       
