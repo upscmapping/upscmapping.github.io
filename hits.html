@@ -103,5 +103,11 @@
       }
     });
   </script>
+<script>
+function cb(response) {
+    document.getElementById('visits').innerText = response.value;
+}
+</script>
+<script async src="https://api.countapi.xyz/hit/upscmapping.hithub.io/visits?callback=cb"></script>
 </body>
 </html>
