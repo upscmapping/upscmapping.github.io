@@ -41,6 +41,20 @@
       margin-top: 10px;
       display: none;
     }
+    #hitCount {
+      font-size: 1.2em;
+      margin-top: 10px;
+    }
+    /* Styled error message for API errors */
+    .api-error {
+      color: red;
+      font-weight: bold;
+      border: 1px solid red;
+      padding: 10px;
+      border-radius: 4px;
+      background-color: #ffe6e6;
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
@@ -64,18 +78,25 @@
       e.preventDefault();
       var pwd = document.getElementById('passwordInput').value;
       if (pwd === 'modichor') {
-        // Hide the login container and show the hit counter container
+        // Hide login and show hit counter container
         document.getElementById('login-container').style.display = 'none';
         document.getElementById('hit-container').style.display = 'block';
-        // Fetch the current hit count using CountAPI (using your GitHub Pages domain as namespace)
+        // Fetch current hit count using CountAPI
         fetch('https://api.countapi.xyz/get/upscmapping.github.io/hitcounter')
-          .then(res => res.json())
+          .then(res => {
+            if (!res.ok) {
+              throw new Error('Network response was not ok');
+            }
+            return res.json();
+          })
           .then(data => {
             document.getElementById('hitCount').textContent = 'Total Hits: ' + data.value;
           })
           .catch(err => {
-            document.getElementById('hitCount').textContent = 'Error fetching hit count.';
             console.error(err);
+            var hitCountEl = document.getElementById('hitCount');
+            hitCountEl.textContent = 'Error fetching hit count. Please try later.';
+            hitCountEl.classList.add('api-error');
           });
       } else {
         document.getElementById('error').style.display = 'block';
